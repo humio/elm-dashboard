@@ -178,19 +178,22 @@ update msg ((Config configInfo) as config) model =
                                     move info.id
                                         (Layout.pointToCoords config mousePosition)
                                         config
-                                        model.widgets
+                                        model
+                                        |> .widgets
 
                                 Left ->
                                     resize info.id
                                         newRect
                                         config
-                                        model.widgets
+                                        model
+                                        |> .widgets
 
                                 Right ->
                                     resize info.id
                                         newRect
                                         config
-                                        model.widgets
+                                        model
+                                        |> .widgets
                     }
                         ! []
 
@@ -212,10 +215,10 @@ found the dashboard is unchanged.
 -}
 remove :
     String
-    -> List Widget
-    -> List Widget
+    -> Model
+    -> Model
 remove id dashboard =
-    List.filter (\(Widget w) -> w.id /= id) dashboard
+    { dashboard | widgets = List.filter (\(Widget w) -> w.id /= id) dashboard.widgets }
 
 
 {-| -}
@@ -258,9 +261,9 @@ add id added config dashboard =
     { dashboard | widgets = updatedWidgets }
 
 
-getById : String -> List Widget -> Maybe Widget
+getById : String -> Model -> Maybe Widget
 getById widgetId dashboard =
-    List.filter (\(Widget w) -> w.id == widgetId) dashboard |> List.head
+    List.filter (\(Widget w) -> w.id == widgetId) dashboard.widgets |> List.head
 
 
 {-| Moves the widget with `id` to `newPoint`.
@@ -269,12 +272,12 @@ move :
     String
     -> { a | x : Int, y : Int }
     -> Config data msg
-    -> List Widget
-    -> List Widget
-move id newPoint config widgets =
-    case getById id widgets of
+    -> Model
+    -> Model
+move id newPoint config dashboard =
+    case getById id dashboard of
         Just (Widget widget) ->
-            remove id widgets
+            remove id dashboard
                 |> add id
                     { x = newPoint.x
                     , y = newPoint.y
@@ -284,7 +287,7 @@ move id newPoint config widgets =
                     config
 
         Nothing ->
-            widgets
+            dashboard
 
 
 {-| Changes the size of the widget with `widgetId` to match `newRect`.
@@ -294,18 +297,18 @@ resize :
     String
     -> Rect
     -> Config data msg
-    -> List Widget
-    -> List Widget
-resize widgetId newRect config widgets =
-    case Layout.unitRectForWidget config widgetId widgets of
+    -> Model
+    -> Model
+resize widgetId newRect config dashboard =
+    case Layout.unitRectForWidget config widgetId dashboard.widgets of
         Just prevRect ->
-            remove widgetId widgets
+            remove widgetId dashboard
                 |> add widgetId
                     newRect
                     config
 
         Nothing ->
-            widgets
+            dashboard
 
 
 
