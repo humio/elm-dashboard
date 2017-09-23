@@ -1,6 +1,8 @@
 module Main exposing (..)
 
 import Dashboard
+import Dashboard.Internal.Data
+import Dashboard.Internal.Layout
 import Html exposing (Html, program)
 import Html.Attributes exposing (style)
 
@@ -17,18 +19,18 @@ type Msg
 init : ( Model, Cmd Msg )
 init =
     ( { dashboard =
-            Dashboard.init
-                [ Dashboard.widget { id = "1", x = 0, width = 2, height = 1 }
-                , Dashboard.widget { id = "2", x = 2, width = 2, height = 2 }
-                , Dashboard.widget { id = "3", x = 4, width = 1, height = 1 }
-                , Dashboard.widget { id = "4", x = 5, width = 1, height = 1 }
-                , Dashboard.widget { id = "5", x = 0, width = 1, height = 1 }
-                , Dashboard.widget { id = "6", x = 1, width = 1, height = 2 }
-                , Dashboard.widget { id = "7", x = 4, width = 2, height = 1 }
-                , Dashboard.widget { id = "8", x = 0, width = 1, height = 1 }
-                , Dashboard.widget { id = "9", x = 2, width = 2, height = 1 }
-                , Dashboard.widget { id = "10", x = 4, width = 1, height = 1 }
-                , Dashboard.widget { id = "11", x = 5, width = 1, height = 1 }
+            Dashboard.initWithWidgets
+                [ Dashboard.Internal.Layout.widget { id = "1", x = 0, width = 2, height = 1 }
+                , Dashboard.Internal.Layout.widget { id = "2", x = 2, width = 2, height = 2 }
+                , Dashboard.Internal.Layout.widget { id = "3", x = 4, width = 1, height = 1 }
+                , Dashboard.Internal.Layout.widget { id = "4", x = 5, width = 1, height = 1 }
+                , Dashboard.Internal.Layout.widget { id = "5", x = 0, width = 1, height = 1 }
+                , Dashboard.Internal.Layout.widget { id = "6", x = 1, width = 1, height = 2 }
+                , Dashboard.Internal.Layout.widget { id = "7", x = 4, width = 2, height = 1 }
+                , Dashboard.Internal.Layout.widget { id = "8", x = 0, width = 1, height = 1 }
+                , Dashboard.Internal.Layout.widget { id = "9", x = 2, width = 2, height = 1 }
+                , Dashboard.Internal.Layout.widget { id = "10", x = 4, width = 1, height = 1 }
+                , Dashboard.Internal.Layout.widget { id = "11", x = 5, width = 1, height = 1 }
                 ]
       }
     , Cmd.none
@@ -54,20 +56,20 @@ subscriptions model =
     Sub.map DashboardMsg (Dashboard.subscriptions model.dashboard)
 
 
-dashboardConfig : Dashboard.Config Dashboard.Widget msg
+dashboardConfig : Dashboard.Internal.Data.Config Dashboard.Internal.Data.Widget msg
 dashboardConfig =
     Dashboard.config
         { columnCount = 6
         , cellSize = 120
         , margin = 20
-        , toWidgetContent = \(Dashboard.Widget w) -> Html.text w.id
+        , toWidgetContent = \(Dashboard.Internal.Data.Widget w) -> Html.text w.id
         }
 
 
 view : Model -> Html Msg
 view model =
     let
-        (Dashboard.Config config) =
+        (Dashboard.Internal.Data.Config config) =
             dashboardConfig
     in
     Html.div
@@ -96,12 +98,12 @@ view model =
                     ]
                 ]
                 [ case model.dashboard.dragState of
-                    Dashboard.NotDragging ->
+                    Dashboard.Internal.Data.NotDragging ->
                         Html.text ""
 
-                    Dashboard.Dragging info ->
+                    Dashboard.Internal.Data.Dragging info ->
                         Html.div []
-                            [ Html.text <| toString <| Dashboard.pointToCoords dashboardConfig info.screenPosition
+                            [ Html.text <| toString <| Dashboard.Internal.Layout.pointToCoords dashboardConfig info.screenPosition
                             , Html.div [] [ Html.text <| "Screen Position: " ++ toString info.screenPosition ]
                             , Html.div [] [ Html.text <| "Point In Widget: " ++ toString info.parentOffset ]
                             ]

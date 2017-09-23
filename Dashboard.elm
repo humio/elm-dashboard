@@ -1,68 +1,61 @@
 module Dashboard
     exposing
-        ( Config(..)
-        , Dashboard
-        , DragState(..)
-        , Model
+        ( Model
         , Msg
-        , Widget(Widget)
         , add
         , config
         , init
+        , initWithWidgets
         , move
-        , pointToCoords
-        , rects
         , remove
+        , resize
         , subscriptions
-        , toString
         , update
         , view
-        , widget
         )
 
-import Array
-import Dashboard.Internal.AsciiGrid as AsciiGrid
+{-| Create and layout dashboards in Elm.
+
+
+# Configuration
+
+@docs config
+
+
+# Modification
+
+@docs add, move, remove, resize, update, Msg
+
+
+# View
+
+@docs view, subscriptions
+
+
+# State
+
+@docs Model, init, initWithWidgets
+
+-}
+
+import Dashboard.Internal.Data as Types exposing (..)
+import Dashboard.Internal.Layout as Layout
 import Html exposing (Html)
 import Html.Attributes exposing (style)
 import Html.Events exposing (onWithOptions)
 import Html.Keyed as Keyed
 import Json.Decode as Json
 import Mouse
-import String
 
 
---------------------------------------------------------------------------------
--- Types
---------------------------------------------------------------------------------
-
-
-type alias DragInfo =
-    { id : String
-    , screenPosition : Mouse.Position
-    , parentOffset : Mouse.Position
-    , corner : Corner
-    , start : Mouse.Position
-    , originalUnitRect : Rect
-    }
-
-
-type Corner
-    = Left
-    | Right
-    | None
-
-
-type DragState
-    = Dragging DragInfo
-    | NotDragging
-
-
+{-| -}
 type alias Model =
     { widgets : List Widget
     , dragState : DragState
     }
 
 
+{-| -}
 type Msg
     = Noop
     | DragStart String Corner ( Mouse.Position, Mouse.Position )
@@ -70,50 +63,8 @@ type Msg
     | DragEnd Mouse.Position
 
 
-type alias ConfigProps data msg =
-    { columnCount : Int
-    , cellSize : Int
-    , toWidgetContent : data -> Html msg
-    , margin : Int
-    }
-
-
-type Config data msg
-    = Config (ConfigProps data msg)
-
-
-type alias WidgetProps =
-    { id : String
-    , x : Int
-    , w : Int
-    , h : Int
-    }
-
-
-type Widget
-    = Widget WidgetProps
-
-
-type alias Dashboard =
-    List Widget
-
-
-widget :
-    { id : String
-    , x : Int
-    , height : Int
-    , width : Int
-    }
-    -> Widget
-widget { id, x, width, height } =
-    Widget
-        { id = id
-        , w = max width 1
-        , h = max height 1
-        , x = max 0 x
-        }
-
-
+{-| A helper function for creating valid configurations.
+-}
 config : ConfigProps data msg -> Config data msg
 config { columnCount, cellSize, toWidgetContent, margin } =
     Config
@@ -130,8 +81,19 @@ config { columnCount, cellSize, toWidgetContent, margin } =
 --------------------------------------------------------------------------------
 
 
-init : List Widget -> Model
-init widgets =
+{-| Creates the state that holds layout and dragging info.
+-}
+init : Model
+init =
+    { dragState = NotDragging
+    , widgets = []
+    }
+
+
+{-| An initializer for copying dashboards
+-}
+initWithWidgets : List Widget -> Model
+initWithWidgets widgets =
     { dragState = NotDragging
     , widgets = widgets
     }
@@ -143,6 +105,8 @@ init widgets =
 --------------------------------------------------------------------------------
 
 
+{-| The update function
+-}
 update :
     Msg
     -> Config data msg
@@ -154,7 +118,7 @@ update msg ((Config configInfo) as config) model =
             model ! []
 
         DragStart id corner ( screenPosition, parentOffset ) ->
-            case unitRectForWidget config id model.widgets of
+            case Layout.unitRectForWidget config id model.widgets of
                 Nothing ->
                     model ! []
 
@@ -187,10 +151,10 @@ update msg ((Config configInfo) as config) model =
                         , widgets =
                             let
                                 a =
-                                    pointToCoords config info.start
+                                    Layout.pointToCoords config info.start
 
                                 b =
-                                    pointToCoords config mousePosition
+                                    Layout.pointToCoords config mousePosition
 
                                 delta =
                                     { x = b.x - a.x, y = b.y - a.y }
@@ -212,7 +176,7 @@ update msg ((Config configInfo) as config) model =
                             case info.corner of
                                 None ->
                                     move info.id
-                                        (pointToCoords config mousePosition)
+                                        (Layout.pointToCoords config mousePosition)
                                         config
                                         model.widgets
 
@@ -238,136 +202,41 @@ update msg ((Config configInfo) as config) model =
 --------------------------------------------------------------------------------
 -- Layout Logic
 --------------------------------------------------------------------------------
-
-
-type alias Rect =
-    { w : Int
-    , h : Int
-    , x : Int
-    , y : Int
-    }
-
-
-unitRects : Config data msg -> Dashboard -> List Rect
-unitRects config widgets =
-    rects (unitConfig config) widgets
-
-
-rects : Config data msg -> Dashboard -> List Rect
-rects ((Config { columnCount }) as config) widgets =
-    let
-        stack =
-            Array.initialize columnCount (always 0)
-    in
-    rectsHelp config stack widgets []
-
-
-rectsHelp : Config data msg -> Array.Array Int -> Dashboard -> List Rect -> List Rect
-rectsHelp ((Config { cellSize, margin }) as config) columnHeights widgets rects =
-    case widgets of
-        (Widget widget) :: rest ->
-            let
-                maxColumn =
-                    widget.x + widget.w - 1
-
-                widgetColumns =
-                    Array.fromList
-                        (List.range widget.x maxColumn)
-
-                maxHeightInRange =
-                    Array.foldl (\x m -> max x m)
-                        0
-                        (Array.slice widget.x (maxColumn + 1) columnHeights)
-
-                newMaxHeight =
-                    maxHeightInRange + widget.h
-
-                updatedHeights =
-                    Array.foldl (\i heights -> Array.set i newMaxHeight heights)
-                        columnHeights
-                        widgetColumns
-
-                rect =
-                    { w = widget.w * cellSize + (margin * (widget.w - 1))
-                    , h = widget.h * cellSize + (margin * (widget.h - 1))
-                    , x = widget.x * cellSize + (margin * (widget.x - 1))
-                    , y = maxHeightInRange * cellSize + (margin * (maxHeightInRange - 1))
-                    }
-            in
-            rectsHelp config updatedHeights rest (rect :: rects)
-
-        [] ->
-            List.reverse rects
-
-
-
 --------------------------------------------------------------------------------
 -- Operations
 --------------------------------------------------------------------------------
 
 
+{-| Removes the widget with `id`. If the widget is not
+found the dashboard is unchanged.
+-}
 remove :
     String
-    -> Dashboard
-    -> Dashboard
+    -> List Widget
+    -> List Widget
 remove id dashboard =
     List.filter (\(Widget w) -> w.id /= id) dashboard
 
 
-{-| returns True if the two rects interfect.
--}
-intersects : Rect -> Rect -> Bool
-intersects r1 r2 =
-    let
-        between min max v =
-            min <= v && v <= max
-
-        xInRange =
-            between r2.x (r2.x + r2.w) r1.x
-                || between r2.x (r2.x + r2.w) (r1.x + r1.w)
-
-        yInRange =
-            between r2.y (r2.y + r2.h) (r1.y + 1)
-                || between r2.y (r2.y + r2.h) (r1.y + r1.h + 1)
-    in
-    xInRange && yInRange
-
-
-clampRectSize :
-    Config data msg
-    -> Rect
-    -> Rect
-clampRectSize (Config config) rect =
-    { rect
-        | w = clamp 1 config.columnCount rect.w
-        , x = min rect.x (config.columnCount - rect.w)
-        , y = max 0 rect.y
-    }
-
-
-unitConfig : Config data msg -> Config data msg
-unitConfig (Config info) =
-    Config { info | cellSize = 1, margin = 0 }
-
-
-add : String -> Rect -> Config data msg -> Dashboard -> Dashboard
+{-| -}
+add : String -> Rect -> Config data msg -> List Widget -> List Widget
 add id added config dashboard =
     let
         addedRestricted =
-            clampRectSize config added
+            Layout.clampRectSize config added
 
         layout =
-            unitRects config dashboard
+            Layout.unitRects config dashboard
 
         firstAffectedIndex =
             List.indexedMap (,) layout
                 |> List.filter
-                    (\( i, existing ) -> intersects addedRestricted existing)
+                    (\( i, existing ) -> Layout.intersects addedRestricted existing)
                 |> List.head
                 |> Maybe.map Tuple.first
 
         newWidget =
-            widget
+            Layout.widget
                 { id = id
                 , x = addedRestricted.x
                 , width = addedRestricted.w
@@ -386,42 +255,24 @@ add id added config dashboard =
                 ]
 
 
-getById : String -> Dashboard -> Maybe Widget
+getById : String -> List Widget -> Maybe Widget
 getById widgetId dashboard =
     List.filter (\(Widget w) -> w.id == widgetId) dashboard |> List.head
 
 
-pointToCoords : Config data msg -> { a | x : Int, y : Int } -> { x : Int, y : Int }
-pointToCoords (Config config) { x, y } =
-    let
-        x1 =
-            x + config.cellSize // 2
-
-        y1 =
-            y + config.cellSize // 2
-
-        x_ =
-            x1 // config.cellSize
-
-        y_ =
-            y1 // config.cellSize
-    in
-    { x = (x1 - config.margin * (x_ - 1)) // config.cellSize
-    , y = (y1 - config.margin * (y_ - 1)) // config.cellSize
-    }
-
-
+{-| Moves the widget with `id` to `newPoint`.
+-}
 move :
     String
     -> { a | x : Int, y : Int }
     -> Config data msg
-    -> Dashboard
-    -> Dashboard
-move widgetId newPoint config widgets =
-    case getById widgetId widgets of
+    -> List Widget
+    -> List Widget
+move id newPoint config widgets =
+    case getById id widgets of
         Just (Widget widget) ->
-            remove widgetId widgets
-                |> add widgetId
+            remove id widgets
+                |> add id
                     { x = newPoint.x
                     , y = newPoint.y
                     , w = widget.w
@@ -433,22 +284,17 @@ move widgetId newPoint config widgets =
             widgets
 
 
-unitRectForWidget : Config data msg -> String -> List Widget -> Maybe Rect
-unitRectForWidget config widgetId widgets =
-    List.map2 (,) (List.map (\(Widget { id }) -> id) widgets) (unitRects config widgets)
-        |> List.filter (\( id, _ ) -> id == widgetId)
-        |> List.head
-        |> Maybe.map Tuple.second
-
-
+{-| Changes the size of the widget with `widgetId` to match `newRect`.
+The minimum size is 1x1.
+-}
 resize :
     String
     -> Rect
     -> Config data msg
-    -> Dashboard
-    -> Dashboard
+    -> List Widget
+    -> List Widget
 resize widgetId newRect config widgets =
-    case unitRectForWidget config widgetId widgets of
+    case Layout.unitRectForWidget config widgetId widgets of
         Just prevRect ->
             remove widgetId widgets
                 |> add widgetId
@@ -459,47 +305,13 @@ resize widgetId newRect config widgets =
             widgets
 
 
-toString : Config data msg -> Dashboard -> String
-toString (Config config) dashboard =
-    let
-        layout =
-            rects (Config { config | cellSize = 1 }) dashboard
-
-        maxY : Int
-        maxY =
-            layout |> List.map (\rect -> rect.y + rect.h) |> List.foldl max 0
-
-        grid =
-            { w = config.columnCount + 1, h = maxY }
-
-        firstLetter id =
-            id
-                |> String.toList
-                |> List.head
-                |> Maybe.withDefault '?'
-
-        layoutWithCharNames =
-            List.map2
-                (\(Widget w) r ->
-                    { id = firstLetter w.id
-                    , x = r.x
-                    , y = r.y
-                    , h = r.h
-                    , w = r.w
-                    }
-                )
-                dashboard
-                layout
-    in
-    AsciiGrid.toString grid layoutWithCharNames
-
-
 
 --------------------------------------------------------------------------------
 -- View
 --------------------------------------------------------------------------------
 
 
+{-| -}
 view : Config data msg -> Model -> Html Msg
 view config model =
     let
@@ -509,7 +321,7 @@ view config model =
         -- y position of the widgets. We have to do the calculation before
         -- reordering by ID.
         ordered =
-            List.map2 (,) model.widgets (rects config model.widgets) |> List.sortBy (\( Widget w, _ ) -> w.id)
+            List.map2 (,) model.widgets (Layout.rects config model.widgets) |> List.sortBy (\( Widget w, _ ) -> w.id)
 
         orderedWidgets =
             List.map Tuple.first ordered
@@ -666,6 +478,7 @@ content inside =
 --------------------------------------------------------------------------------
 
 
+{-| -}
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.dragState of
