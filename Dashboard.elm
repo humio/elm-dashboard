@@ -219,14 +219,14 @@ remove id dashboard =
 
 
 {-| -}
-add : String -> Rect -> Config data msg -> List Widget -> List Widget
+add : String -> Rect -> Config data msg -> Model -> Model
 add id added config dashboard =
     let
         addedRestricted =
             Layout.clampRectSize config added
 
         layout =
-            Layout.unitRects config dashboard
+            Layout.unitRects config dashboard.widgets
 
         firstAffectedIndex =
             List.indexedMap (,) layout
@@ -242,17 +242,20 @@ add id added config dashboard =
                 , width = addedRestricted.w
                 , height = addedRestricted.h
                 }
-    in
-    case firstAffectedIndex of
-        Nothing ->
-            List.append dashboard [ newWidget ]
 
-        Just i ->
-            List.concat
-                [ List.take i dashboard
-                , [ newWidget ]
-                , List.drop i dashboard
-                ]
+        updatedWidgets =
+            case firstAffectedIndex of
+                Nothing ->
+                    List.append dashboard.widgets [ newWidget ]
+
+                Just i ->
+                    List.concat
+                        [ List.take i dashboard.widgets
+                        , [ newWidget ]
+                        , List.drop i dashboard.widgets
+                        ]
+    in
+    { dashboard | widgets = updatedWidgets }
 
 
 getById : String -> List Widget -> Maybe Widget
