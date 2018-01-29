@@ -77,11 +77,6 @@ addFrame a b =
     }
 
 
-fullCanvasWidth : Layout.Config a -> Int
-fullCanvasWidth config =
-    config.cellSize * config.columnCount + config.gridGap * (config.columnCount - 1)
-
-
 {-| -}
 view : Layout.Config { toMsg : Msg -> msg } -> Model -> List (Widget data msg) -> data -> Html msg
 view config model widgets data =
@@ -117,46 +112,58 @@ view config model widgets data =
 
         updatedWidgets =
             List.map updateFrame widgets
+
+        cellWidth =
+            getCellWidth model config
     in
     div
         [ style
-            [ ( "background-image"
-              , if isDragging model then
-                    """linear-gradient(0deg, rgba(0,0,0,0.3), rgba(0,0,0,0.3) 0px, transparent 1px, transparent 7px, rgba(0,0,0,0.1) 7px, transparent 8px, transparent 15px, rgba(0,0,0,0.08) 15px, transparent 16px, transparent 23px, rgba(0,0,0,0.06) 23px, transparent 24px, transparent 31px, rgba(0,0,0,0.04) 31px, transparent 32px, transparent 39px, rgba(0,0,0,0.06) 39px, transparent 40px, transparent 47px, rgba(0,0,0,0.08) 47px, transparent 48px, transparent 55px, rgba(0,0,0,0.1) 55px, transparent 56px, transparent 63px, rgba(0,0,0,0.3) 63px, transparent 64px),
-                   linear-gradient(-90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.3) 0px, transparent 1px, transparent 7px, rgba(0,0,0,0.1) 7px, transparent 8px, transparent 15px, rgba(0,0,0,0.08) 15px, transparent 16px, transparent 23px, rgba(0,0,0,0.06) 23px, transparent 24px, transparent 31px, rgba(0,0,0,0.04) 31px, transparent 32px, transparent 39px, rgba(0,0,0,0.06) 39px, transparent 40px, transparent 47px, rgba(0,0,0,0.08) 47px, transparent 48px, transparent 55px, rgba(0,0,0,0.1) 55px, transparent 56px, transparent 63px, rgba(0,0,0,0.3) 63px, transparent 64px)"""
-                else
-                    "none"
-              )
-            , ( "transition", "all 0.5s" )
-            ]
-        , style
+            [ --( "background-image"
+              -- , if isDragging model then
+              --  , gradient cellWidth
+              --  """linear-gradient(0deg, rgba(0,0,0,0.3), rgba(0,0,0,0.3) 0px, transparent 1px, transparent 7px, rgba(0,0,0,0.1) 7px, transparent 8px, transparent 15px, rgba(0,0,0,0.08) 15px, transparent 16px, transparent 23px, rgba(0,0,0,0.06) 23px, transparent 24px, transparent 31px, rgba(0,0,0,0.04) 31px, transparent 32px, transparent 39px, rgba(0,0,0,0.06) 39px, transparent 40px, transparent 47px, rgba(0,0,0,0.08) 47px, transparent 48px, transparent 55px, rgba(0,0,0,0.1) 55px, transparent 56px, transparent 63px, rgba(0,0,0,0.3) 63px, transparent 64px),
+              -- linear-gradient(-90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.3) 0px, transparent 1px, transparent 7px, rgba(0,0,0,0.1) 7px, transparent 8px, transparent 15px, rgba(0,0,0,0.08) 15px, transparent 16px, transparent 23px, rgba(0,0,0,0.06) 23px, transparent 24px, transparent 31px, rgba(0,0,0,0.04) 31px, transparent 32px, transparent 39px, rgba(0,0,0,0.06) 39px, transparent 40px, transparent 47px, rgba(0,0,0,0.08) 47px, transparent 48px, transparent 55px, rgba(0,0,0,0.1) 55px, transparent 56px, transparent 63px, rgba(0,0,0,0.3) 63px, transparent 64px)"""
+              -- else
+              --     "none"
+              --)
+              ( "transition", "all 0.5s" )
+
             -- TODO: Adjust based on canvas size
-            [ ( "background-size", "74px 74px" )
-            , ( "background-position", "-10px -10px" )
-            , ( "width", px <| config.cellSize * config.columnCount + config.gridGap * (config.columnCount - 1) )
+            --, ( "background-size", px (cellWidth + config.gridGap) ++ " " ++ px (config.cellSize + config.gridGap) )
+            --, ( "background-position", px config.marginLeft ++ " " ++ px config.marginTop )
+            , ( "width", "100%" )
             , ( "height", px <| Layout.canvasHeight config (Dict.values frames) )
             , ( "position", "relative" )
+            , ( "padding-top", px config.marginTop )
+            , ( "padding-right", px config.marginRight )
+            , ( "padding-bottom", px config.marginBottom )
+            , ( "padding-left", px config.marginLeft )
             ]
         ]
-        (List.concatMap (widgetView model config updatedWidgets model.dragState data) updatedWidgets)
+        [ div [ style [ ( "position", "relative" ), ( "width", "100%" ), ( "height", "100%" ) ] ]
+            (List.concatMap (widgetView model config updatedWidgets model.dragState data) updatedWidgets)
+        ]
 
 
-getCellPoint : Point -> Point -> { a | width : Int } -> Int -> Point
-getCellPoint elementOffset clientOffset { width } columnCount =
+gradient : Int -> String
+gradient width =
     let
-        leftCornerX =
-            clientOffset.x - elementOffset.x
+        lineCount =
+            8
 
-        cellX =
-            clamp 0 (columnCount - width) <| round (toFloat leftCornerX / toFloat (cellSize + gapSize))
+        w =
+            width // lineCount
 
-        leftCornerY =
-            clientOffset.y - elementOffset.y
+        color i =
+            if i == 0 || i == lineCount then
+                "rgba(0,0,0,0.3)"
+            else
+                "rgba(0,0,0,0.1)"
 
-        cellY =
-            max 0 <| round (toFloat leftCornerY / toFloat (cellSize + gapSize))
+        x =
+            List.range 0 lineCount |> List.map (\i -> color i ++ " " ++ px (i * w) ++ ", transparent " ++ px (i * w + 1) ++ ", transparent " ++ px ((i + 1) * w))
     in
-    { x = cellX, y = cellY }
+    "linear-gradient(90deg, rgba(0,0,0,0.3), " ++ String.join "," x ++ "), linear-gradient(0deg, rgba(0,0,0,0.3), " ++ String.join "," x ++ ")"
 
 
 {-| -}
@@ -237,10 +244,10 @@ update config widgets msg model =
                     in
                     case dragState.op of
                         Move ->
-                            ( { model | dragState = Just { newState | frameDiff = Layout.move config dragState.mouseStart mousePosition dragState.startFrame } }, Cmd.none, Nothing )
+                            ( { model | dragState = Just { newState | frameDiff = Layout.move config (getCellWidth model config) dragState.mouseStart mousePosition dragState.startFrame } }, Cmd.none, Nothing )
 
                         Resize direction ->
-                            ( { model | dragState = Just { newState | frameDiff = Layout.resize direction config dragState.mouseStart mousePosition dragState.startFrame } }, Cmd.none, Nothing )
+                            ( { model | dragState = Just { newState | frameDiff = Layout.resize direction config (getCellWidth model config) dragState.mouseStart mousePosition dragState.startFrame } }, Cmd.none, Nothing )
 
                 Nothing ->
                     ( model, Cmd.none, Nothing )
@@ -273,16 +280,6 @@ widget id frame toContent =
     Widget id frame toContent
 
 
-cellSize : number
-cellSize =
-    64
-
-
-gapSize : number
-gapSize =
-    10
-
-
 toArea :
     Widget data msg
     -> { height : Int, id : String, width : Int, x : Int, y : Int }
@@ -304,6 +301,28 @@ getCorrectedLayout config ((Widget id { x, y, width, height } toContent) as curr
             toArea current :: List.map toArea (List.filter notCurrent widgets)
     in
     Layout.correct config areas
+
+
+getCellWidth :
+    { a | windowWidth : Int }
+    ->
+        { b
+            | columnCount : Int
+            , gridGap : Int
+            , marginLeft : Int
+            , marginRight : Int
+        }
+    -> Int
+getCellWidth model config =
+    (getCanvasWidth model config - (config.gridGap * (config.columnCount - 1))) // config.columnCount
+
+
+getCanvasWidth :
+    { a | windowWidth : number }
+    -> { b | marginLeft : number, marginRight : number }
+    -> number
+getCanvasWidth model config =
+    model.windowWidth - config.marginLeft - config.marginRight
 
 
 widgetView : Model -> Layout.Config { toMsg : Msg -> msg } -> List (Widget data msg) -> Maybe DragState -> data -> Widget data msg -> List (Html msg)
@@ -342,15 +361,24 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 _ ->
                     ( height, width )
 
+        cellWidth =
+            getCellWidth model config
+
         toGrid x =
             x * cellSize + ((x - 1) * gridGap)
 
         toGridWithGap x =
             x * cellSize + (x * gridGap)
 
+        toGridWidth x =
+            x * cellWidth + ((x - 1) * gridGap)
+
+        toGridWidthWithGap x =
+            x * cellWidth + (x * gridGap)
+
         actualDimensions =
-            { left = toGridWithGap modifiedX
-            , width = toGrid useWidth
+            { left = toGridWidthWithGap modifiedX
+            , width = toGridWidth useWidth
             , top = toGridWithGap modifiedY
             , height = toGrid useHeight
             }
@@ -366,51 +394,51 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 ( Just state, True ) ->
                     case state.op of
                         Move ->
-                            { left = toGridWithGap state.startFrame.x + state.mouseDiff.x
+                            { left = toGridWidthWithGap state.startFrame.x + state.mouseDiff.x
                             , top = toGridWithGap state.startFrame.y + state.mouseDiff.y
-                            , width = toGrid useWidth
+                            , width = toGridWidth useWidth
                             , height = toGrid useHeight
                             }
 
                         Resize Layout.N ->
-                            { left = toGridWithGap state.startFrame.x
+                            { left = toGridWidthWithGap state.startFrame.x
                             , top = toGridWithGap state.startFrame.y + state.mouseDiff.y
-                            , width = toGrid state.startFrame.width
+                            , width = toGridWidth state.startFrame.width
                             , height = toGrid state.startFrame.height - state.mouseDiff.y
                             }
 
                         Resize Layout.S ->
-                            { left = toGridWithGap state.startFrame.x
+                            { left = toGridWidthWithGap state.startFrame.x
                             , top = toGridWithGap state.startFrame.y
-                            , width = toGrid state.startFrame.width
+                            , width = toGridWidth state.startFrame.width
                             , height = toGrid state.startFrame.height + state.mouseDiff.y
                             }
 
                         Resize Layout.E ->
-                            { left = toGridWithGap state.startFrame.x
+                            { left = toGridWidthWithGap state.startFrame.x
                             , top = toGridWithGap state.startFrame.y
-                            , width = toGrid state.startFrame.width + state.mouseDiff.x
+                            , width = toGridWidth state.startFrame.width + state.mouseDiff.x
                             , height = toGrid state.startFrame.height
                             }
 
                         Resize Layout.W ->
-                            { left = toGridWithGap state.startFrame.x + state.mouseDiff.x
+                            { left = toGridWidthWithGap state.startFrame.x + state.mouseDiff.x
                             , top = toGridWithGap state.startFrame.y
-                            , width = toGrid state.startFrame.width - state.mouseDiff.x
+                            , width = toGridWidth state.startFrame.width - state.mouseDiff.x
                             , height = toGrid state.startFrame.height
                             }
 
                         Resize Layout.SW ->
-                            { left = toGridWithGap state.startFrame.x + state.mouseDiff.x
+                            { left = toGridWidthWithGap state.startFrame.x + state.mouseDiff.x
                             , top = toGridWithGap state.startFrame.y
-                            , width = toGrid state.startFrame.width - state.mouseDiff.x
+                            , width = toGridWidth state.startFrame.width - state.mouseDiff.x
                             , height = toGrid state.startFrame.height + state.mouseDiff.y
                             }
 
                         _ ->
-                            { left = toGridWithGap state.startFrame.x
+                            { left = toGridWidthWithGap state.startFrame.x
                             , top = toGridWithGap state.startFrame.y
-                            , width = toGrid state.startFrame.width + state.mouseDiff.x
+                            , width = toGridWidth state.startFrame.width + state.mouseDiff.x
                             , height = toGrid state.startFrame.height + state.mouseDiff.y
                             }
 
@@ -427,7 +455,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                     ]
                 else
                     [ ( "width", "100%" )
-                    , ( "margin-bottom", px 30 )
+                    , ( "margin-bottom", px 20 )
                     , ( "height", px phoneHeight )
                     ]
 
@@ -531,7 +559,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
               )
             ]
         , style
-            (if not isDragging then
+            (if not isDragging && dragState /= Nothing then
                 [ ( "transition", "all 0.2s ease" ) ]
              else
                 []
@@ -549,7 +577,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                             attrs.height
                     , width =
                         if isPhone then
-                            model.windowWidth
+                            model.windowWidth - config.marginLeft - config.marginRight
                         else
                             attrs.width
                     }

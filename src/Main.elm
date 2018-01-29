@@ -154,10 +154,22 @@ dashboardConfig :
     { cellSize : Int
     , columnCount : Int
     , gridGap : Int
+    , marginBottom : Int
+    , marginLeft : Int
+    , marginRight : Int
+    , marginTop : Int
     , toMsg : Dashboard.Msg -> Msg
     }
 dashboardConfig =
-    { cellSize = 64, columnCount = 20, gridGap = 10, toMsg = DashboardMsg }
+    { cellSize = 64
+    , columnCount = 20
+    , gridGap = 20
+    , toMsg = DashboardMsg
+    , marginTop = 20
+    , marginRight = 50
+    , marginLeft = 40
+    , marginBottom = 100
+    }
 
 
 

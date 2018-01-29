@@ -1,5 +1,5 @@
 {
-    "version": "0.0.1",
+    "version": "3.0.0",
     "summary": "A dashboard layout library.",
     "repository": "https://github.com/humio/elm-dashboard.git",
     "license": "Apache-2.0",
