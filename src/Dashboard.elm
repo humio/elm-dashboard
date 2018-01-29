@@ -134,6 +134,9 @@ view config model widgets data =
             , ( "width", "100%" )
             , ( "height", px <| Layout.canvasHeight config (Dict.values frames) )
             , ( "position", "relative" )
+
+            -- For stacking context
+            , ( "z-index", "1" )
             , ( "padding-top", px config.marginTop )
             , ( "padding-right", px config.marginRight )
             , ( "padding-bottom", px config.marginBottom )
@@ -535,7 +538,8 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 []
             ]
     in
-    [ if isDragging && not isPhone then
+    [ -- Move Shadow
+      if isDragging && not isPhone then
         div
             [ style
                 [ ( "border", "dashed 1px rgba(0,0,0,0.7)" )
@@ -556,6 +560,12 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                     "relative"
                 else
                     "absolute"
+              )
+            , ( "z-index"
+              , if isDragging then
+                    "2"
+                else
+                    "1"
               )
             ]
         , style
