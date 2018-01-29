@@ -1,12 +1,14 @@
 {
-    "version": "3.0.0",
+    "version": "3.0.2",
     "summary": "A dashboard layout library.",
     "repository": "https://github.com/humio/elm-dashboard.git",
     "license": "Apache-2.0",
     "source-directories": [
         "src"
     ],
-    "exposed-modules": ["Dashboard"],
+    "exposed-modules": [
+        "Dashboard"
+    ],
     "dependencies": {
         "elm-lang/core": "5.0.0 <= v < 6.0.0",
         "elm-lang/html": "2.0.0 <= v < 3.0.0",
