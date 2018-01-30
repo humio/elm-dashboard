@@ -301,7 +301,7 @@ getCorrectedLayout config ((Widget id { x, y, width, height } toContent) as curr
             id /= wId
 
         areas =
-            toArea current :: List.map toArea (List.filter notCurrent widgets)
+            toArea current :: (widgets |> List.filter notCurrent |> List.map toArea |> List.sortBy .y)
     in
     Layout.correct config areas
 

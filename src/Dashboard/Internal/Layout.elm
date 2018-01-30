@@ -71,7 +71,7 @@ correct { columnCount } widgets =
                             moveOverlapping next newRest [] (a :: completed)
 
         updatedWidgets =
-            case List.map restrict (List.sortBy .y widgets) of
+            case List.map restrict widgets of
                 hd :: rest ->
                     moveOverlapping hd rest [] []
 
