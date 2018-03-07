@@ -12,3 +12,10 @@ node_modules
 
 # Desktop Services Store on macOS
 .DS_Store
+
+# Tags
+tags
+
+# *.swp files
+*.swp
+*.swo
