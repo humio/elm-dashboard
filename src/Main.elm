@@ -31,7 +31,7 @@ init : ( Model, Cmd Msg )
 init =
     let
         loadDashboard =
-            Dashboard.init
+            Dashboard.init { isDraggable = True, isResizable = True }
     in
     { dashboard = Nothing
     , widgets =

@@ -28,9 +28,17 @@ import Window
 
 {-| a Task that will give you the initial dashboard model.
 -}
-init : Task Never Model
-init =
-    Window.width |> Task.map (Model Nothing)
+init : DashboardConfig {} -> Task Never Model
+init { isDraggable, isResizable } =
+    Window.width
+        |> Task.map
+            (\width ->
+                { isResizable = isResizable
+                , isDraggable = isDraggable
+                , dragState = Nothing
+                , windowWidth = width
+                }
+            )
 
 
 type alias Point =
@@ -47,11 +55,19 @@ type alias DragState =
     }
 
 
+type alias DashboardConfig a =
+    { a
+        | isDraggable : Bool
+        , isResizable : Bool
+    }
+
+
 {-| -}
 type alias Model =
-    { dragState : Maybe DragState
-    , windowWidth : Int
-    }
+    DashboardConfig
+        { dragState : Maybe DragState
+        , windowWidth : Int
+        }
 
 
 type Operation
@@ -180,8 +196,8 @@ update config widgets msg model =
             ( { model | windowWidth = width }, Cmd.none, Nothing )
 
         StartDrag widgetId frame operation mousePoint ->
-            ( { model
-                | dragState =
+            let
+                defaultDragState =
                     Just
                         { widgetId = widgetId
                         , frameDiff = { width = 0, height = 0, x = 0, y = 0 }
@@ -190,7 +206,22 @@ update config widgets msg model =
                         , mouseStart = mousePoint
                         , mouseDiff = { x = 0, y = 0 }
                         }
-              }
+
+                updatedModel =
+                    { model
+                        | dragState =
+                            case ( operation, model.isDraggable, model.isResizable ) of
+                                ( Move, True, _ ) ->
+                                    defaultDragState
+
+                                ( Resize _, _, True ) ->
+                                    defaultDragState
+
+                                _ ->
+                                    Nothing
+                    }
+            in
+            ( updatedModel
             , Cmd.none
             , Nothing
             )
@@ -465,74 +496,104 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
         handles =
             [ div
                 [ style
-                    [ ( "position", "absolute" )
-                    , ( "top", "-2px" )
-                    , ( "height", "4px" )
-                    , ( "left", "0" )
-                    , ( "right", "0" )
-                    , ( "cursor", "ns-resize" )
-                    ]
+                    (List.filterMap identity
+                        [ Just ( "position", "absolute" )
+                        , Just ( "top", "-2px" )
+                        , Just ( "height", "4px" )
+                        , Just ( "left", "0" )
+                        , Just ( "right", "0" )
+                        , if model.isResizable then
+                            Just ( "cursor", "ns-resize" )
+                          else
+                            Nothing
+                        ]
+                    )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.N)) Mouse.position)
                 , Html.Attributes.id "top"
                 ]
                 []
             , div
                 [ style
-                    [ ( "position", "absolute" )
-                    , ( "top", "-0" )
-                    , ( "width", "4px" )
-                    , ( "bottom", "0" )
-                    , ( "right", "-2px" )
-                    , ( "cursor", "ew-resize" )
-                    ]
+                    (List.filterMap identity
+                        [ Just ( "position", "absolute" )
+                        , Just ( "top", "-0" )
+                        , Just ( "width", "4px" )
+                        , Just ( "bottom", "0" )
+                        , Just ( "right", "-2px" )
+                        , if model.isResizable then
+                            Just ( "cursor", "ew-resize" )
+                          else
+                            Nothing
+                        ]
+                    )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.E)) Mouse.position)
                 ]
                 []
             , div
                 [ style
-                    [ ( "position", "absolute" )
-                    , ( "right", "0" )
-                    , ( "height", "4px" )
-                    , ( "bottom", "-2px" )
-                    , ( "left", "0" )
-                    , ( "cursor", "ns-resize" )
-                    ]
+                    (List.filterMap identity
+                        [ Just ( "position", "absolute" )
+                        , Just ( "right", "0" )
+                        , Just ( "height", "4px" )
+                        , Just ( "bottom", "-2px" )
+                        , Just ( "left", "0" )
+                        , if model.isResizable then
+                            Just ( "cursor", "ns-resize" )
+                          else
+                            Nothing
+                        ]
+                    )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.S)) Mouse.position)
                 ]
                 []
             , div
                 [ style
-                    [ ( "position", "absolute" )
-                    , ( "top", "-0" )
-                    , ( "width", "4px" )
-                    , ( "bottom", "0" )
-                    , ( "left", "-2px" )
-                    , ( "cursor", "ew-resize" )
-                    ]
+                    (List.filterMap identity
+                        [ Just ( "position", "absolute" )
+                        , Just ( "top", "-0" )
+                        , Just ( "width", "4px" )
+                        , Just ( "bottom", "0" )
+                        , Just ( "left", "-2px" )
+                        , if model.isResizable then
+                            Just ( "cursor", "ew-resize" )
+                          else
+                            Nothing
+                        ]
+                    )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.W)) Mouse.position)
                 ]
                 []
             , div
                 [ style
-                    [ ( "position", "absolute" )
-                    , ( "width", "10px" )
-                    , ( "height", "10px" )
-                    , ( "bottom", "-5px" )
-                    , ( "right", "-5px" )
-                    , ( "cursor", "nwse-resize" )
-                    ]
+                    (List.filterMap identity
+                        [ Just ( "position", "absolute" )
+                        , Just ( "width", "10px" )
+                        , Just ( "height", "10px" )
+                        , Just ( "bottom", "-5px" )
+                        , Just ( "right", "-5px" )
+                        , if model.isResizable then
+                            Just ( "cursor", "nwse-resize" )
+                          else
+                            Nothing
+                        ]
+                    )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.SE)) Mouse.position)
                 ]
                 []
             , div
                 [ style
-                    [ ( "position", "absolute" )
-                    , ( "width", "10px" )
-                    , ( "height", "10px" )
-                    , ( "bottom", "-5px" )
-                    , ( "left", "-5px" )
-                    , ( "cursor", "nesw-resize" )
-                    ]
+                    (List.filterMap identity
+                        [ Just ( "position", "absolute" )
+                        , Just ( "width", "10px" )
+                        , Just ( "height", "10px" )
+                        , Just ( "bottom", "-5px" )
+                        , Just ( "left", "-5px" )
+                        , if model.isResizable then
+                            Just ( "cursor", "nesw-resize" )
+                          else
+                            Nothing
+                        ]
+                    )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.SW)) Mouse.position)
                 ]
                 []
