@@ -496,17 +496,17 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
         handles =
             [ div
                 [ style
-                    (List.filterMap identity
-                        [ Just ( "position", "absolute" )
-                        , Just ( "top", "-2px" )
-                        , Just ( "height", "4px" )
-                        , Just ( "left", "0" )
-                        , Just ( "right", "0" )
-                        , if model.isResizable then
-                            Just ( "cursor", "ns-resize" )
-                          else
-                            Nothing
-                        ]
+                    [ ( "position", "absolute" )
+                    , ( "top", "-2px" )
+                    , ( "height", "4px" )
+                    , ( "left", "0" )
+                    , ( "right", "0" )
+                    ]
+                , style
+                    (if model.isResizable then
+                        [ ( "cursor", "ns-resize" ) ]
+                     else
+                        []
                     )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.N)) Mouse.position)
                 , Html.Attributes.id "top"
@@ -514,85 +514,85 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 []
             , div
                 [ style
-                    (List.filterMap identity
-                        [ Just ( "position", "absolute" )
-                        , Just ( "top", "-0" )
-                        , Just ( "width", "4px" )
-                        , Just ( "bottom", "0" )
-                        , Just ( "right", "-2px" )
-                        , if model.isResizable then
-                            Just ( "cursor", "ew-resize" )
-                          else
-                            Nothing
-                        ]
+                    [ ( "position", "absolute" )
+                    , ( "top", "-0" )
+                    , ( "width", "4px" )
+                    , ( "bottom", "0" )
+                    , ( "right", "-2px" )
+                    ]
+                , style
+                    (if model.isResizable then
+                        [ ( "cursor", "ew-resize" ) ]
+                     else
+                        []
                     )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.E)) Mouse.position)
                 ]
                 []
             , div
                 [ style
-                    (List.filterMap identity
-                        [ Just ( "position", "absolute" )
-                        , Just ( "right", "0" )
-                        , Just ( "height", "4px" )
-                        , Just ( "bottom", "-2px" )
-                        , Just ( "left", "0" )
-                        , if model.isResizable then
-                            Just ( "cursor", "ns-resize" )
-                          else
-                            Nothing
-                        ]
+                    [ ( "position", "absolute" )
+                    , ( "right", "0" )
+                    , ( "height", "4px" )
+                    , ( "bottom", "-2px" )
+                    , ( "left", "0" )
+                    ]
+                , style
+                    (if model.isResizable then
+                        [ ( "cursor", "ns-resize" ) ]
+                     else
+                        []
                     )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.S)) Mouse.position)
                 ]
                 []
             , div
                 [ style
-                    (List.filterMap identity
-                        [ Just ( "position", "absolute" )
-                        , Just ( "top", "-0" )
-                        , Just ( "width", "4px" )
-                        , Just ( "bottom", "0" )
-                        , Just ( "left", "-2px" )
-                        , if model.isResizable then
-                            Just ( "cursor", "ew-resize" )
-                          else
-                            Nothing
-                        ]
+                    [ ( "position", "absolute" )
+                    , ( "top", "-0" )
+                    , ( "width", "4px" )
+                    , ( "bottom", "0" )
+                    , ( "left", "-2px" )
+                    ]
+                , style
+                    (if model.isResizable then
+                        [ ( "cursor", "ew-resize" ) ]
+                     else
+                        []
                     )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.W)) Mouse.position)
                 ]
                 []
             , div
                 [ style
-                    (List.filterMap identity
-                        [ Just ( "position", "absolute" )
-                        , Just ( "width", "10px" )
-                        , Just ( "height", "10px" )
-                        , Just ( "bottom", "-5px" )
-                        , Just ( "right", "-5px" )
-                        , if model.isResizable then
-                            Just ( "cursor", "nwse-resize" )
-                          else
-                            Nothing
-                        ]
+                    [ ( "position", "absolute" )
+                    , ( "width", "10px" )
+                    , ( "height", "10px" )
+                    , ( "bottom", "-5px" )
+                    , ( "right", "-5px" )
+                    ]
+                , style
+                    (if model.isResizable then
+                        [ ( "cursor", "nwse-resize" ) ]
+                     else
+                        []
                     )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.SE)) Mouse.position)
                 ]
                 []
             , div
                 [ style
-                    (List.filterMap identity
-                        [ Just ( "position", "absolute" )
-                        , Just ( "width", "10px" )
-                        , Just ( "height", "10px" )
-                        , Just ( "bottom", "-5px" )
-                        , Just ( "left", "-5px" )
-                        , if model.isResizable then
-                            Just ( "cursor", "nesw-resize" )
-                          else
-                            Nothing
-                        ]
+                    [ ( "position", "absolute" )
+                    , ( "width", "10px" )
+                    , ( "height", "10px" )
+                    , ( "bottom", "-5px" )
+                    , ( "left", "-5px" )
+                    ]
+                , style
+                    (if model.isResizable then
+                        [ ( "cursor", "nesw-resize" ) ]
+                     else
+                        []
                     )
                 , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.SW)) Mouse.position)
                 ]
