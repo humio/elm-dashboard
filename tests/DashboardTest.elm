@@ -9,14 +9,33 @@ type Msg
     = Noop
 
 
-dashboardConfig :
-    { cellSize : number
-    , columnCount : number1
-    , gridGap : number2
-    , toMsg : a -> Msg
+defaultCellWidth : Int
+defaultCellWidth =
+    10
+
+
+defaultConfig : Layout.Config {}
+defaultConfig =
+    { columnCount = 3
+    , cellSize = defaultCellWidth
+    , gridGap = 2
+    , marginTop = 0
+    , marginRight = 0
+    , marginBottom = 0
+    , marginLeft = 0
     }
+
+
+dashboardConfig : Layout.Config {}
 dashboardConfig =
-    { cellSize = 64, columnCount = 10, gridGap = 10, toMsg = \_ -> Noop }
+    { cellSize = 64
+    , columnCount = 10
+    , gridGap = 10
+    , marginTop = 0
+    , marginRight = 0
+    , marginBottom = 0
+    , marginLeft = 0
+    }
 
 
 suite : Test
@@ -91,7 +110,7 @@ suite =
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 7, y = 5 }
@@ -102,12 +121,12 @@ suite =
                     widget =
                         { x = 0, y = 0, width = 0, height = 0 }
                 in
-                Layout.move config mouseOrigin mousePosition widget |> Expect.equal widget
+                Layout.move config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal widget
         , test "move before center of next cell, stay put" <|
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 7, y = 5 }
@@ -118,12 +137,12 @@ suite =
                     widget =
                         { x = 0, y = 0, width = 0, height = 0 }
                 in
-                Layout.move config mouseOrigin mousePosition widget |> Expect.equal widget
+                Layout.move config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal widget
         , test "move to center of next cell, increase" <|
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 7, y = 5 }
@@ -139,12 +158,12 @@ suite =
                     newWidget =
                         { x = 1, y = 0, width = 0, height = 0 }
                 in
-                Layout.move config mouseOrigin mousePosition widget |> Expect.equal newWidget
+                Layout.move config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal newWidget
         , test "move past center of next cell, increase only 1" <|
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 7, y = 5 }
@@ -160,12 +179,12 @@ suite =
                     newWidget =
                         { x = 1, y = 0, width = 0, height = 0 }
                 in
-                Layout.move config mouseOrigin mousePosition widget |> Expect.equal newWidget
+                Layout.move config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal newWidget
         , test "move before center of second cell, increase only 1" <|
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 7, y = 5 }
@@ -184,12 +203,12 @@ suite =
                     newWidget =
                         { x = 1, y = 0, width = 0, height = 0 }
                 in
-                Layout.move config mouseOrigin mousePosition widget |> Expect.equal newWidget
+                Layout.move config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal newWidget
         , test "move left, decrease 1" <|
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 17, y = 5 }
@@ -208,12 +227,12 @@ suite =
                     diff =
                         { x = -1, y = 0, width = 0, height = 0 }
                 in
-                Layout.move config mouseOrigin mousePosition widget |> Expect.equal diff
+                Layout.move config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal diff
         , test "cant move below zero" <|
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 17, y = 5 }
@@ -232,12 +251,12 @@ suite =
                     diff =
                         { x = -1, y = 0, width = 0, height = 0 }
                 in
-                Layout.move config mouseOrigin mousePosition widget |> Expect.equal diff
+                Layout.move config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal diff
         , test "can't move past max column" <|
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 17, y = 5 }
@@ -256,12 +275,12 @@ suite =
                     diff =
                         { x = 1, y = 0, width = 0, height = 0 }
                 in
-                Layout.move config mouseOrigin mousePosition widget |> Expect.equal diff
+                Layout.move config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal diff
         , test "move one y at center of next cell" <|
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 2, y = 2 }
@@ -280,12 +299,12 @@ suite =
                     diff =
                         { x = 0, y = 1, width = 0, height = 0 }
                 in
-                Layout.move config mouseOrigin mousePosition widget |> Expect.equal diff
+                Layout.move config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal diff
         , test "resize one y on SouthEast at center of next cell" <|
             \_ ->
                 let
                     config =
-                        { columnCount = 3, cellSize = 10, gridGap = 2 }
+                        defaultConfig
 
                     mouseOrigin =
                         { x = 2, y = 2 }
@@ -304,5 +323,5 @@ suite =
                     diff =
                         { x = 0, y = 0, width = 0, height = 1 }
                 in
-                Layout.resize config Layout.SE mouseOrigin mousePosition widget |> Expect.equal diff
+                Layout.resize Layout.SE config defaultCellWidth mouseOrigin mousePosition widget |> Expect.equal diff
         ]
