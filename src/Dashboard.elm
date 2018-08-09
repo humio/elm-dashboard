@@ -97,7 +97,7 @@ addFrame a b =
 view : Layout.Config { toMsg : Msg -> msg } -> Model -> List (Widget data msg) -> data -> Html msg
 view config model widgets data =
     let
-        notCurrent dragId (Widget wId _ _) =
+        notCurrent dragId (Widget wId _ _ _) =
             dragId /= wId
 
         areas =
@@ -106,11 +106,11 @@ view config model widgets data =
                     let
                         current =
                             case List.filter (not << notCurrent state.widgetId) widgets |> List.head of
-                                Just (Widget id frame toContent) ->
-                                    Widget id (addFrame frame state.frameDiff) toContent
+                                Just (Widget id frame toContent toAttributes) ->
+                                    Widget id (addFrame frame state.frameDiff) toContent toAttributes
 
                                 Nothing ->
-                                    Widget "x" { x = 1, y = 1, height = 1, width = 1 } (\_ _ -> Html.text "")
+                                    Widget "x" { x = 1, y = 1, height = 1, width = 1 } (\_ _ -> Html.text "") (\_ -> [])
 
                         correctedLayout =
                             getCorrectedLayout config current widgets
@@ -123,8 +123,8 @@ view config model widgets data =
         frames =
             List.map (\a -> ( a.id, { x = a.x, y = a.y, height = a.height, width = a.width } )) areas |> Dict.fromList
 
-        updateFrame ((Widget id _ toContent) as w) =
-            Dict.get id frames |> Maybe.map (\frame -> Widget id frame toContent) |> Maybe.withDefault w
+        updateFrame ((Widget id _ toContent toAttributes) as w) =
+            Dict.get id frames |> Maybe.map (\frame -> Widget id frame toContent toAttributes) |> Maybe.withDefault w
 
         updatedWidgets =
             List.map updateFrame widgets
@@ -229,10 +229,10 @@ update config widgets msg model =
         DragEnd ->
             case model.dragState of
                 Just dragState ->
-                    case List.head (List.filter (\(Widget id _ _) -> id == dragState.widgetId) widgets) of
+                    case List.head (List.filter (\(Widget id _ _ _) -> id == dragState.widgetId) widgets) of
                         Just selected ->
                             let
-                                notCurrent dragId (Widget wId _ _) =
+                                notCurrent dragId (Widget wId _ _ _) =
                                     dragId /= wId
 
                                 areas =
@@ -241,11 +241,11 @@ update config widgets msg model =
                                             let
                                                 current =
                                                     case List.filter (not << notCurrent state.widgetId) widgets |> List.head of
-                                                        Just (Widget id frame toContent) ->
-                                                            Widget id (addFrame frame state.frameDiff) toContent
+                                                        Just (Widget id frame toContent toAttributes) ->
+                                                            Widget id (addFrame frame state.frameDiff) toContent toAttributes
 
                                                         Nothing ->
-                                                            Widget "x" { x = 1, y = 1, height = 1, width = 1 } (\_ _ -> Html.text "")
+                                                            Widget "x" { x = 1, y = 1, height = 1, width = 1 } (\_ _ -> Html.text "") (\_ -> [])
 
                                                 correctedLayout =
                                                     getCorrectedLayout config current widgets
@@ -301,7 +301,7 @@ type alias Frame =
 
 {-| -}
 type Widget data msg
-    = Widget String Frame (data -> Size -> Html msg)
+    = Widget String Frame (data -> Size -> Html msg) (data -> List (Html.Attribute msg))
 
 
 {-| Creates a widget.
@@ -309,15 +309,15 @@ the `id` must be unique. `frame` in the size of the widget in grid dimensions.
 `toContent` is a function that produces the widget's content. It is passed
 the actual size of the widget so you can adjust the content.
 -}
-widget : String -> Frame -> (data -> Size -> Html msg) -> Widget data msg
-widget id frame toContent =
-    Widget id frame toContent
+widget : String -> Frame -> (data -> Size -> Html msg) -> (data -> List (Html.Attribute msg)) -> Widget data msg
+widget id frame toContent toAttributes =
+    Widget id frame toContent toAttributes
 
 
 toArea :
     Widget data msg
     -> { height : Int, id : String, width : Int, x : Int, y : Int }
-toArea (Widget id frame _) =
+toArea (Widget id frame _ _) =
     { id = id, x = frame.x, y = frame.y, height = frame.height, width = frame.width }
 
 
@@ -326,9 +326,9 @@ getCorrectedLayout :
     -> Widget data msg
     -> List (Widget data1 msg1)
     -> List (Layout.Frame { id : String })
-getCorrectedLayout config ((Widget id { x, y, width, height } toContent) as current) widgets =
+getCorrectedLayout config ((Widget id { x, y, width, height } toContent _) as current) widgets =
     let
-        notCurrent (Widget wId _ _) =
+        notCurrent (Widget wId _ _ _) =
             id /= wId
 
         areas =
@@ -360,7 +360,7 @@ getCanvasWidth model config =
 
 
 widgetView : Model -> Layout.Config { toMsg : Msg -> msg } -> List (Widget data msg) -> Maybe DragState -> data -> Widget data msg -> List (Html msg)
-widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets dragState data ((Widget id frame toContent) as current) =
+widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets dragState data ((Widget id frame toContent toAttributes) as current) =
     let
         { x, y, width, height } =
             frame
@@ -614,7 +614,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
       else
         Html.text ""
     , div
-        [ style
+        ([ style
             [ ( "background-color", "white" )
             , ( "position"
               , if isPhone then
@@ -629,15 +629,17 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                     "1"
               )
             ]
-        , style
+         , style
             (if not isDragging && dragState /= Nothing then
                 [ ( "transition", "all 0.2s ease" ) ]
              else
                 []
             )
-        , toStyle attrs
-        , onWithOptions "mousedown" { preventDefault = True, stopPropagation = False } (Json.map toMsg <| Json.map (StartDrag id frame Move) Mouse.position)
-        ]
+         , toStyle attrs
+         , onWithOptions "mousedown" { preventDefault = True, stopPropagation = False } (Json.map toMsg <| Json.map (StartDrag id frame Move) Mouse.position)
+         ]
+            ++ toAttributes data
+        )
       <|
         handles
             ++ [ toContent data
