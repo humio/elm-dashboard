@@ -1,8 +1,9 @@
 module Main exposing (main)
 
+import Browser exposing (Document)
 import Dashboard
 import Dict exposing (Dict)
-import Html exposing (Html, div, program, text)
+import Html exposing (Html, div, text)
 import Html.Attributes exposing (style)
 import Task
 
@@ -27,21 +28,22 @@ type Msg
     | Load Dashboard.Model
 
 
-init : ( Model, Cmd Msg )
-init =
+init : () -> ( Model, Cmd Msg )
+init _ =
     let
         loadDashboard =
             Dashboard.init { isDraggable = True, isResizable = True }
     in
-    { dashboard = Nothing
-    , widgets =
-        Dict.fromList
-            [ ( "a", { x = 0, y = 4, width = 3, height = 4 } )
-            , ( "b", { x = 6, y = 2, width = 4, height = 2 } )
-            , ( "c", { x = 3, y = 4, width = 3, height = 3 } )
-            ]
-    }
-        ! [ Task.perform Load loadDashboard ]
+    ( { dashboard = Nothing
+      , widgets =
+            Dict.fromList
+                [ ( "a", { x = 0, y = 4, width = 3, height = 4 } )
+                , ( "b", { x = 6, y = 2, width = 4, height = 2 } )
+                , ( "c", { x = 3, y = 4, width = 3, height = 3 } )
+                ]
+      }
+    , Task.perform Load loadDashboard
+    )
 
 
 toWidgets : Dict String WidgetProps -> List (Dashboard.Widget a msg)
@@ -52,14 +54,13 @@ toWidgets widgets =
                 frame
                 (\data size ->
                     Html.div
-                        [ style
-                            [ ( "border", "solid 1px black" )
-                            , ( "height", toString size.height ++ "px" )
-                            , ( "width", toString size.width ++ "px" )
-                            ]
+                        [ style "border" "solid 1px black"
+                        , style "height" (String.fromInt size.height ++ "px")
+                        , style "width" (String.fromInt size.width ++ "px")
                         ]
-                        [ Html.text <| id ++ " (" ++ toString size ++ ")" ]
+                        [ Html.text <| id ++ " (" ++ Debug.toString size ++ ")" ]
                 )
+                (\data -> [])
         )
         widgets
         |> Dict.values
@@ -69,22 +70,28 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NoOp ->
-            model ! []
+            ( model
+            , Cmd.none
+            )
 
         Load dashboard ->
-            { model | dashboard = Just dashboard } ! []
+            ( { model | dashboard = Just dashboard }
+            , Cmd.none
+            )
 
-        DashboardMsg msg ->
+        DashboardMsg submsg ->
             case model.dashboard of
                 Nothing ->
-                    model ! []
+                    ( model
+                    , Cmd.none
+                    )
 
                 Just dashboard ->
                     let
                         ( updatedDashboard, cmd, updatedWidgetList ) =
                             Dashboard.update dashboardConfig
                                 (toWidgets model.widgets)
-                                msg
+                                submsg
                                 dashboard
 
                         updatedWidgets =
@@ -111,11 +118,12 @@ update msg model =
                                 Nothing ->
                                     model.widgets
                     in
-                    { model
+                    ( { model
                         | dashboard = Just updatedDashboard
                         , widgets = updatedWidgets
-                    }
-                        ! [ Cmd.map DashboardMsg cmd ]
+                      }
+                    , Cmd.map DashboardMsg cmd
+                    )
 
 
 subscriptions : Model -> Sub Msg
@@ -126,28 +134,30 @@ subscriptions model =
         )
 
 
-view : Model -> Html Msg
+view : Model -> Document Msg
 view model =
-    case model.dashboard of
-        Nothing ->
-            text ""
+    { title = "Dashboard Demo"
+    , body =
+        case model.dashboard of
+            Nothing ->
+                [ text "" ]
 
-        Just dashboard ->
-            Html.div
-                [ style
-                    [ ( "width", "100%" )
-                    , ( "height", "100%" )
-                    , ( "background-color", "white" )
-                    ]
-                ]
+            Just dashboard ->
                 [ Html.div
-                    []
-                    [ Dashboard.view dashboardConfig
-                        dashboard
-                        (toWidgets model.widgets)
-                        ()
+                    [ style "width" "100%"
+                    , style "height" "100%"
+                    , style "background-color" "white"
+                    ]
+                    [ Html.div
+                        []
+                        [ Dashboard.view dashboardConfig
+                            dashboard
+                            (toWidgets model.widgets)
+                            ()
+                        ]
                     ]
                 ]
+    }
 
 
 dashboardConfig :
@@ -176,9 +186,9 @@ dashboardConfig =
 -- MAIN
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    program
+    Browser.document
         { init = init
         , view = view
         , update = update

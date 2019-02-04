@@ -1,4 +1,7 @@
-module Dashboard exposing (Model, Msg, Widget, init, subscriptions, update, view, widget)
+module Dashboard exposing
+    ( Model, init, subscriptions, Msg, update, view
+    , Widget, widget
+    )
 
 {-| A dashboard library for moving and resizing widgets.
 
@@ -14,29 +17,29 @@ module Dashboard exposing (Model, Msg, Widget, init, subscriptions, update, view
 
 -}
 
+import Browser.Dom as Dom
+import Browser.Events as Window
 import Dashboard.Internal.Layout as Layout
 import Dashboard.Internal.Utils as Utils exposing (..)
 import Dict
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, style)
-import Html.Events exposing (onWithOptions)
+import Html.Events as Events
 import Json.Decode as Json
-import Mouse
 import Task exposing (Task)
-import Window
 
 
 {-| a Task that will give you the initial dashboard model.
 -}
 init : DashboardConfig {} -> Task Never Model
 init { isDraggable, isResizable } =
-    Window.width
+    Dom.getViewport
         |> Task.map
-            (\width ->
+            (\{ scene } ->
                 { isResizable = isResizable
                 , isDraggable = isDraggable
                 , dragState = Nothing
-                , windowWidth = width
+                , windowWidth = round scene.width
                 }
             )
 
@@ -78,7 +81,7 @@ type Operation
 {-| -}
 type Msg
     = Noop
-    | StartDrag String Frame Operation Mouse.Position
+    | StartDrag String Frame Operation Layout.Vector2
     | DragEnd
     | DragMove { x : Int, y : Int }
     | AdjustCanvas Int
@@ -133,33 +136,31 @@ view config model widgets data =
             getCellWidth model config
     in
     div
-        [ style
-            [ --( "background-image"
-              -- , if isDragging model then
-              --  , gradient cellWidth
-              --  """linear-gradient(0deg, rgba(0,0,0,0.3), rgba(0,0,0,0.3) 0px, transparent 1px, transparent 7px, rgba(0,0,0,0.1) 7px, transparent 8px, transparent 15px, rgba(0,0,0,0.08) 15px, transparent 16px, transparent 23px, rgba(0,0,0,0.06) 23px, transparent 24px, transparent 31px, rgba(0,0,0,0.04) 31px, transparent 32px, transparent 39px, rgba(0,0,0,0.06) 39px, transparent 40px, transparent 47px, rgba(0,0,0,0.08) 47px, transparent 48px, transparent 55px, rgba(0,0,0,0.1) 55px, transparent 56px, transparent 63px, rgba(0,0,0,0.3) 63px, transparent 64px),
-              -- linear-gradient(-90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.3) 0px, transparent 1px, transparent 7px, rgba(0,0,0,0.1) 7px, transparent 8px, transparent 15px, rgba(0,0,0,0.08) 15px, transparent 16px, transparent 23px, rgba(0,0,0,0.06) 23px, transparent 24px, transparent 31px, rgba(0,0,0,0.04) 31px, transparent 32px, transparent 39px, rgba(0,0,0,0.06) 39px, transparent 40px, transparent 47px, rgba(0,0,0,0.08) 47px, transparent 48px, transparent 55px, rgba(0,0,0,0.1) 55px, transparent 56px, transparent 63px, rgba(0,0,0,0.3) 63px, transparent 64px)"""
-              -- else
-              --     "none"
-              --)
-              ( "transition", "all 0.5s" )
+        [ --( "background-image"
+          -- , if isDragging model then
+          --  , gradient cellWidth
+          --  """linear-gradient(0deg, rgba(0,0,0,0.3), rgba(0,0,0,0.3) 0px, transparent 1px, transparent 7px, rgba(0,0,0,0.1) 7px, transparent 8px, transparent 15px, rgba(0,0,0,0.08) 15px, transparent 16px, transparent 23px, rgba(0,0,0,0.06) 23px, transparent 24px, transparent 31px, rgba(0,0,0,0.04) 31px, transparent 32px, transparent 39px, rgba(0,0,0,0.06) 39px, transparent 40px, transparent 47px, rgba(0,0,0,0.08) 47px, transparent 48px, transparent 55px, rgba(0,0,0,0.1) 55px, transparent 56px, transparent 63px, rgba(0,0,0,0.3) 63px, transparent 64px),
+          -- linear-gradient(-90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.3) 0px, transparent 1px, transparent 7px, rgba(0,0,0,0.1) 7px, transparent 8px, transparent 15px, rgba(0,0,0,0.08) 15px, transparent 16px, transparent 23px, rgba(0,0,0,0.06) 23px, transparent 24px, transparent 31px, rgba(0,0,0,0.04) 31px, transparent 32px, transparent 39px, rgba(0,0,0,0.06) 39px, transparent 40px, transparent 47px, rgba(0,0,0,0.08) 47px, transparent 48px, transparent 55px, rgba(0,0,0,0.1) 55px, transparent 56px, transparent 63px, rgba(0,0,0,0.3) 63px, transparent 64px)"""
+          -- else
+          --     "none"
+          --)
+          style "transition" "all 0.5s"
 
-            -- TODO: Adjust based on canvas size
-            --, ( "background-size", px (cellWidth + config.gridGap) ++ " " ++ px (config.cellSize + config.gridGap) )
-            --, ( "background-position", px config.marginLeft ++ " " ++ px config.marginTop )
-            , ( "width", "100%" )
-            , ( "height", px <| Layout.canvasHeight config (Dict.values frames) )
-            , ( "position", "relative" )
+        -- TODO: Adjust based on canvas size
+        --, ( "background-size", px (cellWidth + config.gridGap) ++ " " ++ px (config.cellSize + config.gridGap) )
+        --, ( "background-position", px config.marginLeft ++ " " ++ px config.marginTop )
+        , style "width" "100%"
+        , style "height" (px <| Layout.canvasHeight config (Dict.values frames))
+        , style "position" "relative"
 
-            -- For stacking context
-            , ( "z-index", "1" )
-            , ( "padding-top", px config.marginTop )
-            , ( "padding-right", px config.marginRight )
-            , ( "padding-bottom", px config.marginBottom )
-            , ( "padding-left", px config.marginLeft )
-            ]
+        -- For stacking context
+        , style "z-index" "1"
+        , style "padding-top" (px config.marginTop)
+        , style "padding-right" (px config.marginRight)
+        , style "padding-bottom" (px config.marginBottom)
+        , style "padding-left" (px config.marginLeft)
         ]
-        [ div [ style [ ( "position", "relative" ), ( "width", "100%" ), ( "height", "100%" ) ] ]
+        [ div [ style "position" "relative", style "width" "100%", style "height" "100%" ]
             (List.concatMap (widgetView model config updatedWidgets model.dragState data) updatedWidgets)
         ]
 
@@ -176,6 +177,7 @@ gradient width =
         color i =
             if i == 0 || i == lineCount then
                 "rgba(0,0,0,0.3)"
+
             else
                 "rgba(0,0,0,0.1)"
 
@@ -359,6 +361,21 @@ getCanvasWidth model config =
     model.windowWidth - config.marginLeft - config.marginRight
 
 
+toStyle isPhone phoneHeight { left, top, width, height } =
+    if not isPhone then
+        [ style "left" (px left)
+        , style "top" (px top)
+        , style "width" (px width)
+        , style "height" (px height)
+        ]
+
+    else
+        [ style "width" "100%"
+        , style "margin-bottom" (px 20)
+        , style "height" (px phoneHeight)
+        ]
+
+
 widgetView : Model -> Layout.Config { toMsg : Msg -> msg } -> List (Widget data msg) -> Maybe DragState -> data -> Widget data msg -> List (Html msg)
 widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets dragState data ((Widget id frame toContent toAttributes) as current) =
     let
@@ -368,7 +385,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
         correctedLayout =
             getCorrectedLayout config current widgets
 
-        isDragging =
+        isDraggingVar =
             case dragState of
                 Just state ->
                     state.widgetId == id
@@ -381,6 +398,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 Just state ->
                     if state.widgetId == id then
                         ( state.startFrame.x + state.frameDiff.x, state.startFrame.y + state.frameDiff.y )
+
                     else
                         ( x, y )
 
@@ -388,7 +406,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                     ( x, y )
 
         ( useHeight, useWidth ) =
-            case ( dragState, isDragging ) of
+            case ( dragState, isDraggingVar ) of
                 ( Just state, True ) ->
                     ( state.startFrame.height + state.frameDiff.height, state.startFrame.width + state.frameDiff.width )
 
@@ -398,17 +416,17 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
         cellWidth =
             getCellWidth model config
 
-        toGrid x =
-            x * cellSize + ((x - 1) * gridGap)
+        toGrid xVar =
+            xVar * cellSize + ((xVar - 1) * gridGap)
 
-        toGridWithGap x =
-            x * cellSize + (x * gridGap)
+        toGridWithGap xVar =
+            xVar * cellSize + (xVar * gridGap)
 
-        toGridWidth x =
-            x * cellWidth + ((x - 1) * gridGap)
+        toGridWidth xVar =
+            xVar * cellWidth + ((xVar - 1) * gridGap)
 
-        toGridWidthWithGap x =
-            x * cellWidth + (x * gridGap)
+        toGridWidthWithGap xVar =
+            xVar * cellWidth + (xVar * gridGap)
 
         actualDimensions =
             { left = toGridWidthWithGap modifiedX
@@ -424,7 +442,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
             260
 
         attrs =
-            case ( dragState, isDragging ) of
+            case ( dragState, isDraggingVar ) of
                 ( Just state, True ) ->
                     case state.op of
                         Move ->
@@ -479,165 +497,163 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 _ ->
                     actualDimensions
 
-        toStyle { left, top, width, height } =
-            style <|
-                if not isPhone then
-                    [ ( "left", px left )
-                    , ( "top", px top )
-                    , ( "width", px width )
-                    , ( "height", px height )
-                    ]
-                else
-                    [ ( "width", "100%" )
-                    , ( "margin-bottom", px 20 )
-                    , ( "height", px phoneHeight )
-                    ]
-
         handles =
             [ div
-                [ style
-                    [ ( "position", "absolute" )
-                    , ( "top", "-2px" )
-                    , ( "height", "4px" )
-                    , ( "left", "0" )
-                    , ( "right", "0" )
-                    ]
-                , style
-                    (if model.isResizable then
-                        [ ( "cursor", "ns-resize" ) ]
-                     else
-                        []
+                [ style "position" "absolute"
+                , style "top" "-2px"
+                , style "height" "4px"
+                , style "left" "0"
+                , style "right" "0"
+                , if model.isResizable then
+                    style "cursor" "ns-resize"
+
+                  else
+                    class ""
+                , Events.custom "mousedown"
+                    (Json.map
+                        (\v -> { message = toMsg v, preventDefault = True, stopPropagation = True })
+                     <|
+                        Json.map (StartDrag id frame (Resize Layout.N)) mousePositionDecoder
                     )
-                , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.N)) Mouse.position)
                 , Html.Attributes.id "top"
                 ]
                 []
             , div
-                [ style
-                    [ ( "position", "absolute" )
-                    , ( "top", "-0" )
-                    , ( "width", "4px" )
-                    , ( "bottom", "0" )
-                    , ( "right", "-2px" )
-                    ]
-                , style
-                    (if model.isResizable then
-                        [ ( "cursor", "ew-resize" ) ]
-                     else
-                        []
+                [ style "position" "absolute"
+                , style "top" "-0"
+                , style "width" "4px"
+                , style "bottom" "0"
+                , style "right" "-2px"
+                , if model.isResizable then
+                    style "cursor" "ew-resize"
+
+                  else
+                    class ""
+                , Events.custom "mousedown"
+                    (Json.map (\v -> { message = toMsg v, preventDefault = True, stopPropagation = True })
+                        (Json.map (StartDrag id frame (Resize Layout.E)) mousePositionDecoder)
                     )
-                , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.E)) Mouse.position)
                 ]
                 []
             , div
-                [ style
-                    [ ( "position", "absolute" )
-                    , ( "right", "0" )
-                    , ( "height", "4px" )
-                    , ( "bottom", "-2px" )
-                    , ( "left", "0" )
-                    ]
-                , style
-                    (if model.isResizable then
-                        [ ( "cursor", "ns-resize" ) ]
-                     else
-                        []
+                [ style "position" "absolute"
+                , style "right" "0"
+                , style "height" "4px"
+                , style "bottom" "-2px"
+                , style "left" "0"
+                , if model.isResizable then
+                    style "cursor" "ns-resize"
+
+                  else
+                    class ""
+                , Events.custom "mousedown"
+                    (Json.map (\v -> { message = toMsg v, preventDefault = True, stopPropagation = True })
+                        (Json.map (StartDrag id frame (Resize Layout.S)) mousePositionDecoder)
                     )
-                , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.S)) Mouse.position)
                 ]
                 []
             , div
-                [ style
-                    [ ( "position", "absolute" )
-                    , ( "top", "-0" )
-                    , ( "width", "4px" )
-                    , ( "bottom", "0" )
-                    , ( "left", "-2px" )
-                    ]
-                , style
-                    (if model.isResizable then
-                        [ ( "cursor", "ew-resize" ) ]
-                     else
-                        []
-                    )
-                , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.W)) Mouse.position)
+                [ style "position" "absolute"
+                , style "top" "-0"
+                , style "width" "4px"
+                , style "bottom" "0"
+                , style "left" "-2px"
+                , if model.isResizable then
+                    style "cursor" "ew-resize"
+
+                  else
+                    class ""
+                , Events.custom "mousedown" (Json.map (\v -> { message = toMsg v, preventDefault = True, stopPropagation = True }) <| Json.map (StartDrag id frame (Resize Layout.W)) mousePositionDecoder)
                 ]
                 []
             , div
-                [ style
-                    [ ( "position", "absolute" )
-                    , ( "width", "10px" )
-                    , ( "height", "10px" )
-                    , ( "bottom", "-5px" )
-                    , ( "right", "-5px" )
-                    ]
-                , style
-                    (if model.isResizable then
-                        [ ( "cursor", "nwse-resize" ) ]
-                     else
-                        []
+                [ style "position" "absolute"
+                , style "width" "10px"
+                , style "height" "10px"
+                , style "bottom" "-5px"
+                , style "right" "-5px"
+                , if model.isResizable then
+                    style "cursor" "nwse-resize"
+
+                  else
+                    class ""
+                , Events.custom "mousedown"
+                    (Json.map
+                        (\v ->
+                            { message = toMsg v
+                            , preventDefault = True
+                            , stopPropagation = True
+                            }
+                        )
+                     <|
+                        Json.map (StartDrag id frame (Resize Layout.SE)) mousePositionDecoder
                     )
-                , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.SE)) Mouse.position)
                 ]
                 []
             , div
-                [ style
-                    [ ( "position", "absolute" )
-                    , ( "width", "10px" )
-                    , ( "height", "10px" )
-                    , ( "bottom", "-5px" )
-                    , ( "left", "-5px" )
-                    ]
-                , style
-                    (if model.isResizable then
-                        [ ( "cursor", "nesw-resize" ) ]
-                     else
-                        []
+                [ style "position" "absolute"
+                , style "width" "10px"
+                , style "height" "10px"
+                , style "bottom" "-5px"
+                , style "left" "-5px"
+                , if model.isResizable then
+                    style "cursor" "nesw-resize"
+
+                  else
+                    class ""
+                , Events.custom "mousedown"
+                    (Json.map
+                        (\v ->
+                            { message = toMsg v
+                            , preventDefault = True
+                            , stopPropagation = True
+                            }
+                        )
+                     <|
+                        Json.map (StartDrag id frame (Resize Layout.SW)) mousePositionDecoder
                     )
-                , onWithOptions "mousedown" { preventDefault = True, stopPropagation = True } (Json.map toMsg <| Json.map (StartDrag id frame (Resize Layout.SW)) Mouse.position)
                 ]
                 []
             ]
     in
     [ -- Move Shadow
-      if isDragging && not isPhone then
+      if isDraggingVar && not isPhone then
         div
-            [ style
-                [ ( "border", "dashed 1px rgba(0,0,0,0.7)" )
-                , ( "background-color", "rgba(0,0,0,0.1)" )
-                , ( "position", "absolute" )
-                , ( "box-sizing", "border-box" )
-                ]
-            , toStyle actualDimensions
-            ]
+            ([ style "border" "dashed 1px rgba(0,0,0,0.7)"
+             , style "background-color" "rgba(0,0,0,0.1)"
+             , style "position" "absolute"
+             , style "box-sizing" "border-box"
+             ]
+                ++ toStyle isPhone phoneHeight actualDimensions
+            )
             []
+
       else
         Html.text ""
     , div
-        ([ style
-            [ ( "background-color", "white" )
-            , ( "position"
-              , if isPhone then
-                    "relative"
-                else
-                    "absolute"
-              )
-            , ( "z-index"
-              , if isDragging then
-                    "2"
-                else
-                    "1"
-              )
-            ]
-         , style
-            (if not isDragging && dragState /= Nothing then
-                [ ( "transition", "all 0.2s ease" ) ]
+        ([ style "background-color" "white"
+         , style "position"
+            (if isPhone then
+                "relative"
+
              else
-                []
+                "absolute"
             )
-         , toStyle attrs
-         , onWithOptions "mousedown" { preventDefault = True, stopPropagation = False } (Json.map toMsg <| Json.map (StartDrag id frame Move) Mouse.position)
+         , style "z-index"
+            (if isDraggingVar then
+                "2"
+
+             else
+                "1"
+            )
+         , if not isDraggingVar && dragState /= Nothing then
+            style "transition" "all 0.2s ease"
+
+           else
+            class ""
+         , Events.custom "mousedown" (Json.map (\v -> { message = toMsg v, preventDefault = True, stopPropagation = False }) <| Json.map (StartDrag id frame Move) mousePositionDecoder)
          ]
+            ++ toStyle isPhone phoneHeight attrs
             ++ toAttributes data
         )
       <|
@@ -646,11 +662,13 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                     { height =
                         if isPhone then
                             phoneHeight
+
                         else
                             attrs.height
                     , width =
                         if isPhone then
                             model.windowWidth - config.marginLeft - config.marginRight
+
                         else
                             attrs.width
                     }
@@ -667,14 +685,18 @@ isDragging dashboard =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Window.resizes (.width >> AdjustCanvas)
+        [ Window.onResize (\width _ -> AdjustCanvas width)
         , case model.dragState of
             Just _ ->
                 Sub.batch
-                    [ Mouse.moves DragMove
-                    , Mouse.ups (\_ -> DragEnd)
+                    [ Window.onMouseMove (Json.map DragMove mousePositionDecoder)
+                    , Window.onMouseUp (Json.succeed DragEnd)
                     ]
 
             Nothing ->
                 Sub.none
         ]
+
+
+mousePositionDecoder =
+    Json.map2 Layout.Vector2 (Json.field "clientX" Json.int) (Json.field "clientY" Json.int)

@@ -1,6 +1,6 @@
 module Dashboard.Internal.Utils exposing (px)
 
 
-px : number -> String
+px : Int -> String
 px x =
-    toString x ++ "px"
+    String.fromInt x ++ "px"

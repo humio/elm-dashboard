@@ -1,17 +1,18 @@
-module Dashboard.Internal.Layout
-    exposing
-        ( Config
-        , Direction(..)
-        , Frame
-        , canvasHeight
-        , correct
-        , isOverlapping
-        , minusPoint
-        , move
-        , resize
-        )
+module Dashboard.Internal.Layout exposing
+    ( Config
+    , Direction(..)
+    , Frame
+    , Vector2
+    , canvasHeight
+    , correct
+    , isOverlapping
+    , minusPoint
+    , move
+    , resize
+    )
 
-import Mouse
+import Browser.Events as Events
+import Json.Decode as D
 
 
 type alias Frame a =
@@ -36,7 +37,7 @@ type alias Config a =
 
 
 type alias Vector2 =
-    Mouse.Position
+    { x : Int, y : Int }
 
 
 correct : Config b -> List (Frame a) -> List (Frame a)
@@ -57,6 +58,7 @@ correct { columnCount } widgets =
                         fixedB =
                             if isOverlapping a b then
                                 { b | y = a.y + a.height }
+
                             else
                                 b
                     in
@@ -88,7 +90,7 @@ minusPoint a b =
     }
 
 
-move : Config b -> Int -> Mouse.Position -> Mouse.Position -> Frame a -> Frame {}
+move : Config b -> Int -> Vector2 -> Vector2 -> Frame a -> Frame {}
 move config cellWidth mouseOrigin mousePosition frame =
     let
         yStepSize =
@@ -103,6 +105,7 @@ move config cellWidth mouseOrigin mousePosition frame =
         xDirection =
             if mouseDiff.x > 0 then
                 1
+
             else
                 -1
 
@@ -115,6 +118,7 @@ move config cellWidth mouseOrigin mousePosition frame =
         xDiff =
             if mouseDiff.x < xStepSize && mouseDiff.x > -xStepSize then
                 0
+
             else
                 ((mouseDiff.x - xStepSize * xDirection) // (cellWidth + config.gridGap) + 1 * xDirection)
                     |> clamp xMin xMax
@@ -122,6 +126,7 @@ move config cellWidth mouseOrigin mousePosition frame =
         yDirection =
             if mouseDiff.y > 0 then
                 1
+
             else
                 -1
 
@@ -131,6 +136,7 @@ move config cellWidth mouseOrigin mousePosition frame =
         yDiff =
             if mouseDiff.y < yStepSize && mouseDiff.y > -yStepSize then
                 0
+
             else
                 ((mouseDiff.y - yStepSize * yDirection) // (config.cellSize + config.gridGap) + 1 * yDirection)
                     |> max yMin
@@ -149,7 +155,7 @@ type Direction
     | SE
 
 
-resize : Direction -> Config b -> Int -> Mouse.Position -> Mouse.Position -> Frame a -> Frame {}
+resize : Direction -> Config b -> Int -> Vector2 -> Vector2 -> Frame a -> Frame {}
 resize direction =
     case direction of
         N ->
@@ -174,7 +180,7 @@ resize direction =
             resizeN
 
 
-resizeSW : Config b -> Int -> Mouse.Position -> Mouse.Position -> Frame a -> Frame {}
+resizeSW : Config b -> Int -> Vector2 -> Vector2 -> Frame a -> Frame {}
 resizeSW config cellWidth mouseOrigin mousePosition frame =
     let
         yStepSize =
@@ -189,6 +195,7 @@ resizeSW config cellWidth mouseOrigin mousePosition frame =
         xDirection =
             if mouseDiff.x > 0 then
                 1
+
             else
                 -1
 
@@ -201,6 +208,7 @@ resizeSW config cellWidth mouseOrigin mousePosition frame =
         xDiff =
             if mouseDiff.x < xStepSize && mouseDiff.x > -xStepSize then
                 0
+
             else
                 ((mouseDiff.x - xStepSize * xDirection) // (cellWidth + config.gridGap) + xDirection)
                     |> clamp xMin xMax
@@ -208,6 +216,7 @@ resizeSW config cellWidth mouseOrigin mousePosition frame =
         yDirection =
             if mouseDiff.y > 0 then
                 1
+
             else
                 -1
 
@@ -217,6 +226,7 @@ resizeSW config cellWidth mouseOrigin mousePosition frame =
         yDiff =
             if mouseDiff.y < yStepSize && mouseDiff.y > -yStepSize then
                 0
+
             else
                 ((mouseDiff.y - yStepSize * yDirection) // (config.cellSize + config.gridGap) + yDirection)
                     |> max yMin
@@ -228,7 +238,7 @@ resizeSW config cellWidth mouseOrigin mousePosition frame =
     }
 
 
-resizeSE : Config b -> Int -> Mouse.Position -> Mouse.Position -> Frame a -> Frame {}
+resizeSE : Config b -> Int -> Vector2 -> Vector2 -> Frame a -> Frame {}
 resizeSE config cellWidth mouseOrigin mousePosition frame =
     let
         yStepSize =
@@ -243,6 +253,7 @@ resizeSE config cellWidth mouseOrigin mousePosition frame =
         xDirection =
             if mouseDiff.x > 0 then
                 1
+
             else
                 -1
 
@@ -255,6 +266,7 @@ resizeSE config cellWidth mouseOrigin mousePosition frame =
         xDiff =
             if mouseDiff.x < xStepSize && mouseDiff.x > -xStepSize then
                 0
+
             else
                 ((mouseDiff.x - xStepSize * xDirection) // (cellWidth + config.gridGap) + xDirection)
                     |> clamp xMin xMax
@@ -262,6 +274,7 @@ resizeSE config cellWidth mouseOrigin mousePosition frame =
         yDirection =
             if mouseDiff.y > 0 then
                 1
+
             else
                 -1
 
@@ -271,6 +284,7 @@ resizeSE config cellWidth mouseOrigin mousePosition frame =
         yDiff =
             if mouseDiff.y < yStepSize && mouseDiff.y > -yStepSize then
                 0
+
             else
                 ((mouseDiff.y - yStepSize * yDirection) // (config.cellSize + config.gridGap) + yDirection)
                     |> max yMin
@@ -282,7 +296,7 @@ resizeSE config cellWidth mouseOrigin mousePosition frame =
     }
 
 
-resizeN : Config b -> Int -> Mouse.Position -> Mouse.Position -> Frame a -> Frame {}
+resizeN : Config b -> Int -> Vector2 -> Vector2 -> Frame a -> Frame {}
 resizeN config cellWidth mouseOrigin mousePosition frame =
     let
         stepSize =
@@ -294,6 +308,7 @@ resizeN config cellWidth mouseOrigin mousePosition frame =
         yDirection =
             if mouseDiff.y > 0 then
                 1
+
             else
                 -1
 
@@ -306,6 +321,7 @@ resizeN config cellWidth mouseOrigin mousePosition frame =
         yDiff =
             if mouseDiff.y < stepSize && mouseDiff.y > -stepSize then
                 0
+
             else
                 ((mouseDiff.y - stepSize * yDirection) // (config.cellSize + config.gridGap) + yDirection)
                     |> clamp yMin yMax
@@ -317,7 +333,7 @@ resizeN config cellWidth mouseOrigin mousePosition frame =
     }
 
 
-resizeS : Config b -> Int -> Mouse.Position -> Mouse.Position -> Frame a -> Frame {}
+resizeS : Config b -> Int -> Vector2 -> Vector2 -> Frame a -> Frame {}
 resizeS config cellWidth mouseOrigin mousePosition frame =
     let
         stepSize =
@@ -329,6 +345,7 @@ resizeS config cellWidth mouseOrigin mousePosition frame =
         yDirection =
             if mouseDiff.y > 0 then
                 1
+
             else
                 -1
 
@@ -338,6 +355,7 @@ resizeS config cellWidth mouseOrigin mousePosition frame =
         yDiff =
             if mouseDiff.y < stepSize && mouseDiff.y > -stepSize then
                 0
+
             else
                 ((mouseDiff.y - stepSize * yDirection) // (config.cellSize + config.gridGap) + yDirection)
                     |> max yMin
@@ -349,7 +367,7 @@ resizeS config cellWidth mouseOrigin mousePosition frame =
     }
 
 
-resizeW : Config b -> Int -> Mouse.Position -> Mouse.Position -> Frame a -> Frame {}
+resizeW : Config b -> Int -> Vector2 -> Vector2 -> Frame a -> Frame {}
 resizeW config cellWidth mouseOrigin mousePosition frame =
     let
         stepSize =
@@ -361,6 +379,7 @@ resizeW config cellWidth mouseOrigin mousePosition frame =
         xDirection =
             if mouseDiff.x > 0 then
                 1
+
             else
                 -1
 
@@ -373,6 +392,7 @@ resizeW config cellWidth mouseOrigin mousePosition frame =
         xDiff =
             if mouseDiff.x < stepSize && mouseDiff.x > -stepSize then
                 0
+
             else
                 ((mouseDiff.x - stepSize * xDirection) // (cellWidth + config.gridGap) + xDirection)
                     |> clamp xMin xMax
@@ -384,7 +404,7 @@ resizeW config cellWidth mouseOrigin mousePosition frame =
     }
 
 
-resizeE : Config b -> Int -> Mouse.Position -> Mouse.Position -> Frame a -> Frame {}
+resizeE : Config b -> Int -> Vector2 -> Vector2 -> Frame a -> Frame {}
 resizeE config cellWidth mouseOrigin mousePosition frame =
     let
         stepSize =
@@ -396,6 +416,7 @@ resizeE config cellWidth mouseOrigin mousePosition frame =
         xDirection =
             if mouseDiff.x > 0 then
                 1
+
             else
                 -1
 
@@ -408,6 +429,7 @@ resizeE config cellWidth mouseOrigin mousePosition frame =
         xDiff =
             if mouseDiff.x < stepSize && mouseDiff.x > -stepSize then
                 0
+
             else
                 ((mouseDiff.x - stepSize * xDirection) // (cellWidth + config.gridGap) + xDirection)
                     |> clamp xMin xMax
