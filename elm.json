@@ -3,7 +3,7 @@
     "name": "humio/elm-dashboard",
     "summary": "A dashboard layout library.",
     "license": "Apache-2.0",
-    "version": "6.0.0",
+    "version": "5.0.1",
     "exposed-modules": [
         "Dashboard"
     ],
