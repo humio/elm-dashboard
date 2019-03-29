@@ -32,7 +32,7 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     let
         loadDashboard =
-            Dashboard.init { isDraggable = True, isResizable = True }
+            Dashboard.init
     in
     ( { dashboard = Nothing
       , widgets =
@@ -89,7 +89,7 @@ update msg model =
                 Just dashboard ->
                     let
                         ( updatedDashboard, cmd, updatedWidgetList ) =
-                            Dashboard.update dashboardConfig
+                            Dashboard.update { isDraggable = True, isResizable = True } dashboardConfig
                                 (toWidgets model.widgets)
                                 submsg
                                 dashboard
@@ -150,7 +150,7 @@ view model =
                     ]
                     [ Html.div
                         []
-                        [ Dashboard.view dashboardConfig
+                        [ Dashboard.view { isDraggable = True, isResizable = True } dashboardConfig
                             dashboard
                             (toWidgets model.widgets)
                             ()

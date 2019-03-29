@@ -31,14 +31,12 @@ import Task exposing (Task)
 
 {-| a Task that will give you the initial dashboard model.
 -}
-init : DashboardConfig {} -> Task Never Model
-init { isDraggable, isResizable } =
+init : Task Never Model
+init =
     Dom.getViewport
         |> Task.map
             (\{ scene } ->
-                { isResizable = isResizable
-                , isDraggable = isDraggable
-                , dragState = Nothing
+                { dragState = Nothing
                 , windowWidth = round scene.width
                 }
             )
@@ -67,10 +65,9 @@ type alias DashboardConfig a =
 
 {-| -}
 type alias Model =
-    DashboardConfig
-        { dragState : Maybe DragState
-        , windowWidth : Int
-        }
+    { dragState : Maybe DragState
+    , windowWidth : Int
+    }
 
 
 type Operation
@@ -97,8 +94,8 @@ addFrame a b =
 
 
 {-| -}
-view : Layout.Config { toMsg : Msg -> msg } -> Model -> List (Widget data msg) -> data -> Html msg
-view config model widgets data =
+view : DashboardConfig {} -> Layout.Config { toMsg : Msg -> msg } -> Model -> List (Widget data msg) -> data -> Html msg
+view config layout model widgets data =
     let
         notCurrent dragId (Widget wId _ _ _) =
             dragId /= wId
@@ -116,7 +113,7 @@ view config model widgets data =
                                     Widget "x" { x = 1, y = 1, height = 1, width = 1 } (\_ _ -> Html.text "") (\_ -> [])
 
                         correctedLayout =
-                            getCorrectedLayout config current widgets
+                            getCorrectedLayout layout current widgets
                     in
                     toArea current :: correctedLayout
 
@@ -133,7 +130,7 @@ view config model widgets data =
             List.map updateFrame widgets
 
         cellWidth =
-            getCellWidth model config
+            getCellWidth model layout
     in
     div
         [ --( "background-image"
@@ -150,18 +147,18 @@ view config model widgets data =
         --, ( "background-size", px (cellWidth + config.gridGap) ++ " " ++ px (config.cellSize + config.gridGap) )
         --, ( "background-position", px config.marginLeft ++ " " ++ px config.marginTop )
         , style "width" "100%"
-        , style "height" (px <| Layout.canvasHeight config (Dict.values frames))
+        , style "height" (px <| Layout.canvasHeight layout (Dict.values frames))
         , style "position" "relative"
 
         -- For stacking context
         , style "z-index" "1"
-        , style "padding-top" (px config.marginTop)
-        , style "padding-right" (px config.marginRight)
-        , style "padding-bottom" (px config.marginBottom)
-        , style "padding-left" (px config.marginLeft)
+        , style "padding-top" (px layout.marginTop)
+        , style "padding-right" (px layout.marginRight)
+        , style "padding-bottom" (px layout.marginBottom)
+        , style "padding-left" (px layout.marginLeft)
         ]
         [ div [ style "position" "relative", style "width" "100%", style "height" "100%" ]
-            (List.concatMap (widgetView model config updatedWidgets model.dragState data) updatedWidgets)
+            (List.concatMap (widgetView model config layout updatedWidgets model.dragState data) updatedWidgets)
         ]
 
 
@@ -188,8 +185,8 @@ gradient width =
 
 
 {-| -}
-update : Layout.Config { toMsg : Msg -> msg } -> List (Widget data msg) -> Msg -> Model -> ( Model, Cmd Msg, Maybe (List ( String, { x : Int, y : Int, height : Int, width : Int } )) )
-update config widgets msg model =
+update : DashboardConfig {} -> Layout.Config { toMsg : Msg -> msg } -> List (Widget data msg) -> Msg -> Model -> ( Model, Cmd Msg, Maybe (List ( String, { x : Int, y : Int, height : Int, width : Int } )) )
+update config layout widgets msg model =
     case msg of
         Noop ->
             ( model, Cmd.none, Nothing )
@@ -212,7 +209,7 @@ update config widgets msg model =
                 updatedModel =
                     { model
                         | dragState =
-                            case ( operation, model.isDraggable, model.isResizable ) of
+                            case ( operation, config.isDraggable, config.isResizable ) of
                                 ( Move, True, _ ) ->
                                     defaultDragState
 
@@ -250,7 +247,7 @@ update config widgets msg model =
                                                             Widget "x" { x = 1, y = 1, height = 1, width = 1 } (\_ _ -> Html.text "") (\_ -> [])
 
                                                 correctedLayout =
-                                                    getCorrectedLayout config current widgets
+                                                    getCorrectedLayout layout current widgets
                                             in
                                             toArea current :: correctedLayout
 
@@ -280,10 +277,10 @@ update config widgets msg model =
                     in
                     case dragState.op of
                         Move ->
-                            ( { model | dragState = Just { newState | frameDiff = Layout.move config (getCellWidth model config) dragState.mouseStart mousePosition dragState.startFrame } }, Cmd.none, Nothing )
+                            ( { model | dragState = Just { newState | frameDiff = Layout.move layout (getCellWidth model layout) dragState.mouseStart mousePosition dragState.startFrame } }, Cmd.none, Nothing )
 
                         Resize direction ->
-                            ( { model | dragState = Just { newState | frameDiff = Layout.resize direction config (getCellWidth model config) dragState.mouseStart mousePosition dragState.startFrame } }, Cmd.none, Nothing )
+                            ( { model | dragState = Just { newState | frameDiff = Layout.resize direction layout (getCellWidth model layout) dragState.mouseStart mousePosition dragState.startFrame } }, Cmd.none, Nothing )
 
                 Nothing ->
                     ( model, Cmd.none, Nothing )
@@ -376,14 +373,14 @@ toStyle isPhone phoneHeight { left, top, width, height } =
         ]
 
 
-widgetView : Model -> Layout.Config { toMsg : Msg -> msg } -> List (Widget data msg) -> Maybe DragState -> data -> Widget data msg -> List (Html msg)
-widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets dragState data ((Widget id frame toContent toAttributes) as current) =
+widgetView : Model -> DashboardConfig {} -> Layout.Config { toMsg : Msg -> msg } -> List (Widget data msg) -> Maybe DragState -> data -> Widget data msg -> List (Html msg)
+widgetView model config ({ toMsg, cellSize, gridGap, columnCount } as layout) widgets dragState data ((Widget id frame toContent toAttributes) as current) =
     let
         { x, y, width, height } =
             frame
 
         correctedLayout =
-            getCorrectedLayout config current widgets
+            getCorrectedLayout layout current widgets
 
         isDraggingVar =
             case dragState of
@@ -414,7 +411,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                     ( height, width )
 
         cellWidth =
-            getCellWidth model config
+            getCellWidth model layout
 
         toGrid xVar =
             xVar * cellSize + ((xVar - 1) * gridGap)
@@ -504,7 +501,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 , style "height" "4px"
                 , style "left" "0"
                 , style "right" "0"
-                , if model.isResizable then
+                , if config.isResizable then
                     style "cursor" "ns-resize"
 
                   else
@@ -524,7 +521,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 , style "width" "4px"
                 , style "bottom" "0"
                 , style "right" "-2px"
-                , if model.isResizable then
+                , if config.isResizable then
                     style "cursor" "ew-resize"
 
                   else
@@ -541,7 +538,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 , style "height" "4px"
                 , style "bottom" "-2px"
                 , style "left" "0"
-                , if model.isResizable then
+                , if config.isResizable then
                     style "cursor" "ns-resize"
 
                   else
@@ -558,7 +555,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 , style "width" "4px"
                 , style "bottom" "0"
                 , style "left" "-2px"
-                , if model.isResizable then
+                , if config.isResizable then
                     style "cursor" "ew-resize"
 
                   else
@@ -572,7 +569,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 , style "height" "10px"
                 , style "bottom" "-5px"
                 , style "right" "-5px"
-                , if model.isResizable then
+                , if config.isResizable then
                     style "cursor" "nwse-resize"
 
                   else
@@ -596,7 +593,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                 , style "height" "10px"
                 , style "bottom" "-5px"
                 , style "left" "-5px"
-                , if model.isResizable then
+                , if config.isResizable then
                     style "cursor" "nesw-resize"
 
                   else
@@ -667,7 +664,7 @@ widgetView model ({ toMsg, cellSize, gridGap, columnCount } as config) widgets d
                             attrs.height
                     , width =
                         if isPhone then
-                            model.windowWidth - config.marginLeft - config.marginRight
+                            model.windowWidth - layout.marginLeft - layout.marginRight
 
                         else
                             attrs.width

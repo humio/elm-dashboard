@@ -446,6 +446,7 @@ canvasHeight config frames =
     List.maximum (List.map (\f -> f.y + f.height) frames)
         |> Maybe.withDefault 0
         |> (\max -> max * config.cellSize + (max - 1) * config.gridGap)
+        |> ((+) 50) -- HACK: There is something off with the height. Add some padding (Feels bad man)
 
 
 isOverlapping : Frame a -> Frame b -> Bool
