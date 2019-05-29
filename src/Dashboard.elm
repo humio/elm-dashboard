@@ -636,13 +636,11 @@ widgetView model config ({ toMsg, cellSize, gridGap, columnCount } as layout) wi
              else
                 "absolute"
             )
-         , style "z-index"
-            (if isDraggingVar then
-                "2"
+         , if isDraggingVar then
+            style "z-index" "2"
 
-             else
-                "1"
-            )
+           else
+            class ""
          , if not isDraggingVar && dragState /= Nothing then
             style "transition" "all 0.2s ease"
 
